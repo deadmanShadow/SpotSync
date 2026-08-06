@@ -55,7 +55,7 @@ func main() {
 		// Services
 		authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 		zoneService := service.NewZoneService(zoneRepo)
-		reservationService := service.NewReservationService(reservationRepo, zoneRepo)
+		reservationService := service.NewReservationService(reservationRepo)
 
 		// Handlers
 		authHandler := handler.NewAuthHandler(authService)

@@ -8,10 +8,13 @@ import (
 	"spotsync-backend/internal/dto"
 	"spotsync-backend/internal/models"
 	"spotsync-backend/internal/repository"
-	"spotsync-backend/pkg/utils"
 )
 
-// Sentinel errors returned by ReservationService.
+// Sentinel errors returned by ReservationService. The handler layer maps
+// these to HTTP status codes.
+//
+// Note: ErrZoneNotFound is defined in zone_service.go (same package) and is
+// re-used here to keep the package-level error vocabulary consistent.
 var (
 	ErrReservationNotFound = errors.New("reservation not found")
 	ErrZoneFull            = errors.New("zone has reached full capacity")
@@ -31,44 +34,35 @@ type ReservationService interface {
 
 type reservationService struct {
 	reservationRepo repository.ReservationRepository
-	zoneRepo        repository.ZoneRepository
 }
 
 // NewReservationService wires a ReservationService backed by the given
-// repositories.
-func NewReservationService(reservationRepo repository.ReservationRepository, zoneRepo repository.ZoneRepository) ReservationService {
+// repository. The capacity check + insert happens atomically inside the
+// repository's CreateWithCapacityCheck (SELECT ... FOR UPDATE).
+func NewReservationService(reservationRepo repository.ReservationRepository) ReservationService {
 	return &reservationService{
 		reservationRepo: reservationRepo,
-		zoneRepo:        zoneRepo,
 	}
 }
 
+// Create reserves a parking spot for the authenticated user.
+//
+// The capacity check is performed inside the repository inside a single
+// transaction that holds a row-level FOR UPDATE lock on the parking zone
+// row. This guarantees that under concurrent reservation attempts for the
+// same zone we never exceed total_capacity (i.e. no "21st reservation"
+// race condition on an EV spot with capacity 20).
 func (s *reservationService) Create(userID uint, req dto.CreateReservationRequest) (*models.Reservation, error) {
-	// Verify the zone exists and has capacity available.
-	zone, err := s.zoneRepo.FindByID(req.ZoneID)
+	reservation, err := s.reservationRepo.CreateWithCapacityCheck(userID, req.ZoneID, req.LicensePlate)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		switch {
+		case errors.Is(err, repository.ErrZoneNotFoundInTx):
 			return nil, ErrZoneNotFound
+		case errors.Is(err, repository.ErrZoneFull):
+			return nil, ErrZoneFull
+		default:
+			return nil, err
 		}
-		return nil, err
-	}
-
-	active, err := s.zoneRepo.CountActiveReservations(zone.ID)
-	if err != nil {
-		return nil, err
-	}
-	if int(active) >= zone.TotalCapacity {
-		return nil, ErrZoneFull
-	}
-
-	reservation := &models.Reservation{
-		UserID:       userID,
-		ZoneID:       req.ZoneID,
-		LicensePlate: req.LicensePlate,
-		Status:       "active",
-	}
-	if err := s.reservationRepo.Create(reservation); err != nil {
-		return nil, err
 	}
 	return reservation, nil
 }
@@ -130,7 +124,3 @@ func (s *reservationService) Delete(userID uint, id uint, isAdmin bool) error {
 	}
 	return s.reservationRepo.Delete(id)
 }
-
-// Ensure utils is referenced to avoid an unused import if helper functions are
-// later moved into this file.
-var _ = utils.HashPassword

@@ -3,10 +3,12 @@ package database
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	"spotsync-backend/internal/config"
 	"spotsync-backend/internal/models"
@@ -20,7 +22,19 @@ func ConnectDB(cfg *config.Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("DATABASE_URL is not configured")
 	}
 
-	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{})
+	gormLogger := logger.New(
+		log.New(os.Stdout, "\r\n[gorm] ", log.LstdFlags),
+		logger.Config{
+			SlowThreshold:             200 * time.Millisecond,
+			LogLevel:                  logger.Warn,
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  true,
+		},
+	)
+
+	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{
+		Logger: gormLogger,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}

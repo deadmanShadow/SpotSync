@@ -8,13 +8,20 @@
 /** Role discriminator for the two first-class user personas in SpotSync. */
 export type UserRole = "driver" | "admin";
 
-/** Authenticated user record returned by /auth/login and /auth/register. */
+/**
+ * Authenticated user record returned by /auth/login and /auth/register.
+ *
+ * NOTE: the Go backend serializes the user-display field as `name`
+ * (`json:"name"` in `backend/internal/dto/auth_dto.go`). We mirror that
+ * exact key on the frontend so the API envelopes deserialize cleanly.
+ */
 export interface User {
   id: number;
-  full_name: string;
+  name: string;
   email: string;
   role: UserRole;
   created_at: string;
+  updated_at?: string;
 }
 
 /** Credentials captured on the login page. */
@@ -25,7 +32,7 @@ export interface LoginCredentials {
 
 /** Credentials captured on the registration page (role is selected client-side). */
 export interface RegisterPayload {
-  full_name: string;
+  name: string;
   email: string;
   password: string;
   role: UserRole;

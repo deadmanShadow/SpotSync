@@ -1,8 +1,9 @@
 ---
 // Top navigation bar for SpotSync.
 //
-// Server-rendered shell with a fully reactive client-side <script> that
-// subscribes to the Nano Stores $user atom. The script:
+// Server-rendered shell with a fully reactive client-side script tag
+// at the bottom of this file that subscribes to the Nano Stores $user
+// atom. The script:
 //
 //   1. Hydrates the visible user state from the persistent atom so the
 //      page renders correctly even after a full refresh.
@@ -119,8 +120,8 @@ const { pathname = Astro.url.pathname } = Astro.props;
   // We import the auth store at runtime so this script only runs in the
   // browser. The store is persistent, so a refresh already has the user
   // available; we just need to render the right controls.
-  import { $user, $isAuthenticated, $isAdmin, clearSession } from "../store/authStore";
-  import type { User } from "../types/auth";
+  import { $isAdmin, $isAuthenticated, $user, clearSession } from "../store/authStore";
+import type { User } from "../types/auth";
 
   // Build the HTML for the right-hand auth controls based on the current
   // session state. Kept as a string template so the script can swap
@@ -135,7 +136,7 @@ const { pathname = Astro.url.pathname } = Astro.props;
     }
 
     // Signed in: avatar + name + role badge + logout.
-    const initials = (user.full_name || user.email)
+    const initials = (user.name || user.email)
       .split(/\s+/)
       .map((part) => part.charAt(0).toUpperCase())
       .slice(0, 2)
@@ -147,7 +148,7 @@ const { pathname = Astro.url.pathname } = Astro.props;
       : "bg-blue-500/15 text-blue-300 border border-blue-500/30";
     const roleBadgeLabel = isAdminUser ? "Admin" : "Driver";
 
-    const safeName = escapeHtml(user.full_name);
+    const safeName = escapeHtml(user.name);
     const safeEmail = escapeHtml(user.email);
 
     return `

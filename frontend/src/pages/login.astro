@@ -1,0 +1,241 @@
+---
+// Login page (`/login`).
+//
+// Server-rendered shell with a reactive client script that handles
+// form submission, demo quick-fill, password visibility toggling, and
+// role-based redirects after a successful login.
+
+import Layout from "@/layouts/Layout.astro";
+import AuthShell from "@/components/auth/AuthShell.astro";
+import AuthFormField from "@/components/auth/AuthFormField.astro";
+import DemoFill from "@/components/auth/DemoFill.astro";
+import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
+---
+
+<Layout title="Sign In — SpotSync" description="Sign in to your SpotSync account to reserve parking and EV charging spots in real time.">
+
+  <AuthShell
+    heading="Sign in to SpotSync"
+    headingAccent="SpotSync"
+    subheading="Reserve parking and EV charging spots in real time. Enter your credentials to continue."
+    accent="emerald"
+    badge="Welcome back"
+  >
+    <DemoFill />
+
+    <div class="flex items-center gap-3 my-1" role="separator">
+      <span
+        class="h-px flex-1 bg-gradient-to-r from-slate-700/0 via-slate-700/50 to-slate-700/0"
+        aria-hidden="true"
+      ></span>
+      <span class="text-[0.7rem] font-semibold uppercase tracking-wider text-slate-500">
+        or sign in with email
+      </span>
+      <span
+        class="h-px flex-1 bg-gradient-to-r from-slate-700/0 via-slate-700/50 to-slate-700/0"
+        aria-hidden="true"
+      ></span>
+    </div>
+
+    <form id="login-form" class="flex flex-col gap-[1.1rem]" novalidate>
+      <AuthFormField
+        id="email"
+        name="email"
+        label="Email address"
+        type="email"
+        placeholder="you@example.com"
+        autocomplete="email"
+        required={true}
+        icon="mail"
+      />
+
+      <AuthFormField
+        id="password"
+        name="password"
+        label="Password"
+        type="password"
+        placeholder="Enter your password"
+        autocomplete="current-password"
+        required={true}
+        minlength={6}
+        icon="lock"
+      />
+
+      <div class="flex items-center justify-between gap-4 mt-0.5">
+        <label class="auth-checkbox inline-flex cursor-pointer select-none items-center gap-2.5">
+          <input type="checkbox" id="remember-me" name="remember" class="peer absolute h-0 w-0 opacity-0" />
+          <span class="auth-checkbox-box inline-flex h-[1.05rem] w-[1.05rem] shrink-0 items-center justify-center rounded-[0.3rem] border-[1.5px] border-slate-700/80 bg-slate-900/60 text-transparent transition-all duration-150 peer-checked:border-transparent peer-checked:bg-gradient-to-br peer-checked:from-emerald-500 peer-checked:to-emerald-600 peer-checked:text-white peer-checked:shadow-[0_0_0_3px_rgba(16,185,129,0.18)] [&_svg]:h-3 [&_svg]:w-3" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </span>
+          <span class="auth-checkbox-label text-[0.8rem] text-slate-400">Remember me for 30 days</span>
+        </label>
+        <a href="#" class="text-[0.8rem] text-slate-400 no-underline transition-colors duration-150 hover:text-emerald-400">
+          Forgot password?
+        </a>
+      </div>
+
+      <div
+        id="login-error"
+        role="alert"
+        class="hidden flex items-center gap-2.5 rounded-[0.625rem] border border-red-500/35 bg-red-500/10 px-[0.85rem] py-[0.7rem] text-[0.85rem] text-red-300"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-[1.1rem] w-[1.1rem] shrink-0">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span data-error-message></span>
+      </div>
+
+      <PrimarySubmit
+        label="Sign In"
+        loadingLabel="Signing in..."
+        icon="arrow-right"
+        id="login-submit"
+      />
+    </form>
+
+    <p class="text-center text-[0.85rem] text-slate-400 mt-2 mb-0">
+      Don't have an account?
+      <a href="/register" class="auth-link font-semibold text-emerald-400 no-underline transition-colors duration-150 hover:text-emerald-300 hover:underline hover:underline-offset-[3px]">Create one for free</a>
+    </p>
+  </AuthShell>
+</Layout>
+
+<script>
+  import { ApiError } from "../services/api";
+import { login } from "../services/authService";
+import { setSession } from "../store/authStore";
+
+  /* ---------- One-shot cross-page notice ----------------------------- */
+  // If the user just registered, /register stored a success notice here.
+  // Show it once and clear it so it doesn't repeat on subsequent visits.
+  const pendingNotice = window.sessionStorage.getItem("spotsync_auth_notice");
+  if (pendingNotice) {
+    window.sessionStorage.removeItem("spotsync_auth_notice");
+    const w = window as unknown as {
+      showToast?: (message: string, type?: string) => void;
+    };
+    if (typeof w.showToast === "function") {
+      w.showToast(pendingNotice, "success");
+    }
+  }
+
+  /* ---------- Demo credentials ---------------------------------------- */
+  const DEMO_ACCOUNTS = {
+    driver: { email: "john@spotsync.com", password: "password123" },
+    admin: { email: "admin@spotsync.com", password: "adminpassword" },
+  } as const;
+
+  /* ---------- DOM lookups --------------------------------------------- */
+  const form = document.getElementById("login-form") as HTMLFormElement;
+  const emailInput = document.getElementById("email") as HTMLInputElement;
+  const passwordInput = document.getElementById("password") as HTMLInputElement;
+  const errorBox = document.getElementById("login-error") as HTMLDivElement;
+  const errorMessage = errorBox.querySelector("[data-error-message]") as HTMLElement;
+  const submitButton = document.getElementById("login-submit") as HTMLButtonElement;
+  const submitLabel = submitButton.querySelector("[data-label]") as HTMLElement;
+
+  /* ---------- Password visibility toggle ------------------------------ */
+  document.querySelectorAll<HTMLButtonElement>("[data-toggle-password]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const wrap = btn.closest(".auth-input-wrap");
+      const input = wrap?.querySelector("input") as HTMLInputElement | null;
+      if (!input) return;
+      const isHidden = input.type === "password";
+      input.type = isHidden ? "text" : "password";
+      const eyeOn = btn.querySelector("[data-eye-on]") as HTMLElement | null;
+      const eyeOff = btn.querySelector("[data-eye-off]") as HTMLElement | null;
+      eyeOn?.classList.toggle("hidden", isHidden);
+      eyeOff?.classList.toggle("hidden", !isHidden);
+    });
+  });
+
+  /* ---------- Quick-fill demo buttons -------------------------------- */
+  document.querySelectorAll<HTMLButtonElement>("[data-fill]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const role = button.dataset.fill as "driver" | "admin" | undefined;
+      if (!role) return;
+      const account = DEMO_ACCOUNTS[role];
+      emailInput.value = account.email;
+      passwordInput.value = account.password;
+      hideError();
+      emailInput.focus();
+      // Brief visual feedback: pulse the inputs
+      [emailInput, passwordInput].forEach((input) => {
+        input.classList.add("animate-auth-input-pulse");
+        window.setTimeout(() => input.classList.remove("animate-auth-input-pulse"), 600);
+      });
+    });
+  });
+
+  /* ---------- Helpers ----------------------------------------------- */
+  function showError(message: string): void {
+    errorMessage.textContent = message;
+    errorBox.classList.remove("hidden");
+  }
+
+  function hideError(): void {
+    errorBox.classList.add("hidden");
+    errorMessage.textContent = "";
+  }
+
+  function setLoading(loading: boolean): void {
+    submitButton.disabled = loading;
+    submitButton.dataset.loading = loading ? "true" : "false";
+    submitLabel.textContent = loading ? "Signing in..." : "Sign In";
+    submitButton.querySelector("[data-spinner]")?.classList.toggle("hidden", !loading);
+    submitButton.querySelector("[data-arrow]")?.classList.toggle("invisible", loading);
+  }
+
+  function friendlyError(err: unknown): string {
+    if (err instanceof ApiError) {
+      if (err.status === 401) return "Invalid email or password. Please try again.";
+      if (err.status === 0) return "Unable to reach the server. Please check your connection.";
+      return err.message;
+    }
+    if (err instanceof Error) return err.message;
+    return "An unexpected error occurred. Please try again.";
+  }
+
+  /* ---------- Submit handler ---------------------------------------- */
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    hideError();
+
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!email || !password) {
+      showError("Please enter both email and password.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await login({ email, password });
+      setSession(response.token, response.user);
+
+      const w = window as unknown as {
+        showToast?: (message: string, type?: string) => void;
+      };
+      if (typeof w.showToast === "function") {
+        w.showToast(`Welcome back, ${response.user.name}!`, "success");
+      }
+
+      // The /admin route is not built yet, so always land on "/" for now
+      // and surface an info toast when an admin signs in. Once the admin
+      // dashboard exists, this can become response.user.role === "admin" ? "/admin" : "/".
+      const isAdmin = response.user.role === "admin";
+      if (isAdmin && typeof w.showToast === "function") {
+        w.showToast("Signed in as admin — admin dashboard coming soon.", "info");
+      }
+      window.location.href = "/";
+    } catch (err) {
+      setLoading(false);
+      showError(friendlyError(err));
+    }
+  });
+</script>

@@ -85,6 +85,22 @@ export default {
           '0%, 100%': { boxShadow: '0 0 12px rgba(16, 185, 129, 0.4)' },
           '50%': { boxShadow: '0 0 24px rgba(16, 185, 129, 0.8)' },
         },
+        'auth-input-pulse': {
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(16, 185, 129, 0)' },
+          '50%': { boxShadow: '0 0 0 6px rgba(16, 185, 129, 0.15)' },
+        },
+        'auth-orb-float': {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '33%': { transform: 'translate(30px, -40px) scale(1.05)' },
+          '66%': { transform: 'translate(-20px, 30px) scale(0.95)' },
+        },
+        'auth-dot-pulse': {
+          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+          '50%': { opacity: '0.5', transform: 'scale(0.85)' },
+        },
+        'primary-submit-spin': {
+          to: { transform: 'rotate(360deg)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -92,6 +108,11 @@ export default {
         'fade-in': 'fade-in 0.4s ease-out',
         'slide-in-right': 'slide-in-right 0.3s ease-out',
         'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
+        'auth-input-pulse': 'auth-input-pulse 0.6s ease-in-out',
+        'auth-orb-float': 'auth-orb-float 18s ease-in-out infinite',
+        'auth-orb-float-reverse': 'auth-orb-float 22s ease-in-out infinite reverse',
+        'auth-dot-pulse': 'auth-dot-pulse 2s ease-in-out infinite',
+        'primary-submit-spin': 'primary-submit-spin 0.8s linear infinite',
       },
       backdropBlur: {
         xs: '2px',

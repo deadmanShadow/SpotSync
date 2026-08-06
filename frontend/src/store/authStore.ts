@@ -21,8 +21,8 @@
 import { persistentAtom } from "@nanostores/persistent";
 import { computed, type ReadableAtom } from "nanostores";
 
-import type { User } from "../types/auth";
 import { TOKEN_STORAGE_KEY } from "../services/api";
+import type { User } from "../types/auth";
 
 /* -------------------------------------------------------------------------- */
 /* Persistent atoms                                                           */

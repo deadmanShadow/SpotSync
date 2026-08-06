@@ -86,7 +86,13 @@
       "Bash(powershell.exe -Command \"Get-Process -Name spotsync-api -ErrorAction SilentlyContinue | Stop-Process -Force\")",
       "Bash(powershell.exe -ExecutionPolicy Bypass -File \"E:/Dev/projects/myproject/Spotsync/backend/kill_server.ps1\")",
       "Bash(echo \"EXIT: $?\")",
-      "Bash(ls *.exe)"
+      "Bash(ls *.exe)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(echo \"vet exit: $?\")",
+      "Bash(echo \"api build exit: $?\")",
+      "Bash(go doc:*)",
+      "Bash(echo \"full build exit: $?\")",
+      "Bash(echo \"mod verify exit: $?\")"
     ]
   }
 }

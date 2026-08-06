@@ -15,7 +15,7 @@ import (
 
 // main is only invoked when running the binary locally (`go run` or the
 // compiled executable). On Vercel, the platform imports `api/index.go`
-// and reads the exported `http.Handler` directly, so the long-running
+// and invokes the exported `Handler` function directly, so the long-running
 // server only exists in local development.
 func main() {
 	// Build (or reuse) the shared Echo instance.
@@ -24,7 +24,8 @@ func main() {
 	// Load config just for the port + graceful shutdown.
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		log.Printf("WARNING: Failed to load configuration: %v", err)
+		cfg = &config.Config{Port: "8080"}
 	}
 
 	// 5. Start server with graceful shutdown

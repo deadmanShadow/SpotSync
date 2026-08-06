@@ -5,8 +5,8 @@
 //
 // Keeping initialization in a package that is NOT `main` is important:
 // a `main` package cannot be imported by other Go packages, but Vercel's
-// Go runtime needs to import the entry file and read an `http.Handler`
-// out of it.
+// Go runtime needs to import the entry file and read the exported
+// `Handler` symbol from it.
 package server
 
 import (
@@ -41,17 +41,30 @@ func Get() *echo.Echo {
 }
 
 // build wires up the Echo application: config, middleware, routes, and
-// the database connection. It is called once via `sync.Once`.
+// the database connection. It is called once via `sync.Once`. Even when
+// the database is unreachable the Echo app is still constructed (with a
+// `/health` endpoint and a stub error handler) so the serverless
+// function returns meaningful HTTP responses instead of nil-panicking
+// on every invocation.
 func build() {
-	// 1. Load configuration
+	// 1. Load configuration. On Vercel we never `log.Fatalf` because that
+	// would terminate the serverless instance before it can respond; we
+	// just log the failure and fall back to sensible defaults so the app
+	// still comes up.
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		log.Printf("WARNING: Failed to load configuration: %v", err)
+		cfg = &config.Config{
+			Port:        "8080",
+			DatabaseURL: "",
+			JWTSecret:   "supersecretjwtkey",
+		}
 	}
 
 	// 2. Initialize Echo
 	e := echo.New()
 	e.HideBanner = true
+	e.HidePort = true
 	e.Validator = utils.NewValidator()
 
 	// Central HTTP error handler — wraps all errors (route 404s, validation
@@ -86,11 +99,13 @@ func build() {
 			http.MethodPost,
 			http.MethodPut,
 			http.MethodDelete,
+			http.MethodPatch,
 			http.MethodOptions,
 		},
 	}))
 
-	// 3. Health check route (public)
+	// 3. Health check route (public) — always available, even if the
+	// database is down. Useful for Vercel/load-balancer health probes.
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "UP"})
 	})
@@ -104,62 +119,66 @@ func build() {
 	if err != nil {
 		log.Printf("WARNING: Database connection failed: %v", err)
 		log.Println("Server will continue running but DB-dependent endpoints will not work.")
-	} else {
-		// Repositories
-		userRepo := repository.NewUserRepository(db)
-		zoneRepo := repository.NewZoneRepository(db)
-		reservationRepo := repository.NewReservationRepository(db)
-
-		// Services
-		authService := service.NewAuthService(userRepo, cfg.JWTSecret)
-		zoneService := service.NewZoneService(zoneRepo)
-		reservationService := service.NewReservationService(reservationRepo)
-
-		// Handlers
-		authHandler := handler.NewAuthHandler(authService)
-		zoneHandler := handler.NewZoneHandler(zoneService)
-		reservationHandler := handler.NewReservationHandler(reservationService)
-
-		// Run GORM auto-migrations in the background so the server can
-		// accept traffic immediately.
-		go func() {
-			if err := database.AutoMigrate(db); err != nil {
-				log.Printf("WARNING: Auto-migration failed: %v", err)
-			} else {
-				log.Println("Database migrations applied successfully")
-			}
-		}()
-
-		// --- Public auth routes ---
-		authGroup := e.Group("/api/v1/auth")
-		authGroup.POST("/register", authHandler.Register)
-		authGroup.POST("/login", authHandler.Login)
-
-		// --- Public zone catalog (browsing does not require auth) ---
-		// Per Backend.MD Step 5: GET /zones and /zones/:id are public so the
-		// frontend can render availability without forcing a login.
-		e.GET("/api/v1/zones", zoneHandler.List)
-		e.GET("/api/v1/zones/:id", zoneHandler.GetByID)
-
-		// --- Authenticated routes ---
-		auth := middleware.AuthMiddleware(cfg.JWTSecret)
-
-		// Zone mutations are admin-only.
-		zoneGroup := e.Group("/api/v1/zones", auth)
-		zoneGroup.POST("", zoneHandler.Create, middleware.AdminOnly())
-		zoneGroup.PUT("/:id", zoneHandler.Update, middleware.AdminOnly())
-		zoneGroup.DELETE("/:id", zoneHandler.Delete, middleware.AdminOnly())
-
-		// Reservations: any authenticated user can manage their own; admins
-		// can see/modify all.
-		reservationGroup := e.Group("/api/v1/reservations", auth)
-		reservationGroup.GET("/mine", reservationHandler.ListMine)
-		reservationGroup.GET("", reservationHandler.ListAll, middleware.AdminOnly())
-		reservationGroup.GET("/:id", reservationHandler.GetByID)
-		reservationGroup.POST("", reservationHandler.Create)
-		reservationGroup.PATCH("/:id/status", reservationHandler.UpdateStatus)
-		reservationGroup.DELETE("/:id", reservationHandler.Delete)
+		// Still expose the health endpoint so Vercel invocations return
+		// something useful instead of crashing on a nil DB.
+		app = e
+		return
 	}
+
+	// Repositories
+	userRepo := repository.NewUserRepository(db)
+	zoneRepo := repository.NewZoneRepository(db)
+	reservationRepo := repository.NewReservationRepository(db)
+
+	// Services
+	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
+	zoneService := service.NewZoneService(zoneRepo)
+	reservationService := service.NewReservationService(reservationRepo)
+
+	// Handlers
+	authHandler := handler.NewAuthHandler(authService)
+	zoneHandler := handler.NewZoneHandler(zoneService)
+	reservationHandler := handler.NewReservationHandler(reservationService)
+
+	// Run GORM auto-migrations in the background so the server can
+	// accept traffic immediately.
+	go func() {
+		if err := database.AutoMigrate(db); err != nil {
+			log.Printf("WARNING: Auto-migration failed: %v", err)
+		} else {
+			log.Println("Database migrations applied successfully")
+		}
+	}()
+
+	// --- Public auth routes ---
+	authGroup := e.Group("/api/v1/auth")
+	authGroup.POST("/register", authHandler.Register)
+	authGroup.POST("/login", authHandler.Login)
+
+	// --- Public zone catalog (browsing does not require auth) ---
+	// Per Backend.MD Step 5: GET /zones and /zones/:id are public so the
+	// frontend can render availability without forcing a login.
+	e.GET("/api/v1/zones", zoneHandler.List)
+	e.GET("/api/v1/zones/:id", zoneHandler.GetByID)
+
+	// --- Authenticated routes ---
+	auth := middleware.AuthMiddleware(cfg.JWTSecret)
+
+	// Zone mutations are admin-only.
+	zoneGroup := e.Group("/api/v1/zones", auth)
+	zoneGroup.POST("", zoneHandler.Create, middleware.AdminOnly())
+	zoneGroup.PUT("/:id", zoneHandler.Update, middleware.AdminOnly())
+	zoneGroup.DELETE("/:id", zoneHandler.Delete, middleware.AdminOnly())
+
+	// Reservations: any authenticated user can manage their own; admins
+	// can see/modify all.
+	reservationGroup := e.Group("/api/v1/reservations", auth)
+	reservationGroup.GET("/mine", reservationHandler.ListMine)
+	reservationGroup.GET("", reservationHandler.ListAll, middleware.AdminOnly())
+	reservationGroup.GET("/:id", reservationHandler.GetByID)
+	reservationGroup.POST("", reservationHandler.Create)
+	reservationGroup.PATCH("/:id/status", reservationHandler.UpdateStatus)
+	reservationGroup.DELETE("/:id", reservationHandler.Delete)
 
 	app = e
 }

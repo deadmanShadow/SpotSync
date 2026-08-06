@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go version:*)",
+      "Bash(go mod:*)",
+      "Bash(go get:*)",
+      "Bash(go build:*)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(go run:*)",
+      "Bash(curl -s -w \"\\\\nHTTP_CODE=%{http_code}\\\\n\" http://localhost:8080/health)",
+      "Bash(curl -s -i http://localhost:8080/health)",
+      "Bash(netstat -ano)",
+      "Bash(echo \"BUILD_EXIT=$?\")",
+      "Bash(powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { try { Stop-Process -Id $_.OwningProcess -Force -ErrorAction Stop; Write-Output \\('Killed PID ' + $_.OwningProcess\\) } catch { Write-Output \\('Failed to kill PID ' + $_.OwningProcess + ': ' + $_.Exception.Message\\) } }\")",
+      "Bash(powershell -NoProfile -Command \"Stop-Process -Id 24096 -Force -ErrorAction Continue; Start-Sleep -Seconds 1; Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | Format-Table LocalPort, OwningProcess\")",
+      "Bash(powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction Continue }; Start-Sleep -Seconds 1; Write-Output 'Cleanup done'\")",
+      "Bash(powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 8080 -State Listen | Stop-Process -Id { 'OwningProcess' } -Force\")",
+      "Bash(wmic process:*)",
+      "Bash(powershell -NoProfile -Command \"Stop-Process -Id 22992 -Force; Start-Sleep -Seconds 1; Write-Output 'Sent kill'\")",
+      "Bash(echo \"STATUS=$?\")"
+    ]
+  }
+}

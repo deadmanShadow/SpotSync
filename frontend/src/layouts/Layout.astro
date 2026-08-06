@@ -1,5 +1,6 @@
 ---
 import "@/styles/global.css";
+import Navbar from "@/components/Navbar.astro";
 
 interface Props {
   title?: string;
@@ -26,6 +27,7 @@ const { title = "SpotSync — Smart Parking & EV Charging", description = "SpotS
     <title>{title}</title>
   </head>
   <body class="min-h-screen text-slate-100 font-sans antialiased">
+    <Navbar pathname={Astro.url.pathname} />
     <slot />
 
     <!-- Toast notification container -->

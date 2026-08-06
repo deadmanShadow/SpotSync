@@ -1,0 +1,271 @@
+---
+// Top navigation bar for SpotSync.
+//
+// Server-rendered shell with a fully reactive client-side <script> that
+// subscribes to the Nano Stores $user atom. The script:
+//
+//   1. Hydrates the visible user state from the persistent atom so the
+//      page renders correctly even after a full refresh.
+//   2. Re-renders the user/role/logout controls every time $user
+//      changes (login, logout, role switch).
+//   3. Wires the logout button to clearSession() and redirects to
+//      /login after wiping the session.
+//
+// For role-based links:
+//   - "Parking Zones" (/)            — visible to everyone.
+//   - "My Reservations" (/my-reservations) — visible to drivers and admins.
+//   - "Admin Dashboard" (/admin)     — visible only to admins.
+//
+// The data- attributes are the script's render hooks. They are stable
+// strings so the script can always find them after Astro hydrates.
+
+interface Props {
+  /** Optional current pathname for marking the active link. */
+  pathname?: string;
+}
+
+const { pathname = Astro.url.pathname } = Astro.props;
+---
+
+<header class="glass-nav sticky top-0 z-50 w-full">
+  <nav class="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
+    <!-- Brand logo -->
+    <a href="/" class="flex items-center gap-2 group" aria-label="SpotSync home">
+      <span
+        class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:shadow-emerald-500/50 transition-all"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="w-5 h-5 text-white"
+          aria-hidden="true"
+        >
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+      </span>
+      <span class="font-display text-xl font-bold text-gradient-brand">
+        SpotSync
+      </span>
+    </a>
+
+    <!-- Center navigation links (role-aware) -->
+    <div class="hidden md:flex items-center gap-1" data-nav-links>
+      <a
+        href="/"
+        class:list={[
+          "px-4 py-2 rounded-lg text-sm font-medium transition-all",
+          pathname === "/"
+            ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
+            : "text-slate-300 hover:text-slate-100 hover:bg-slate-800/60",
+        ]}
+      >
+        Parking Zones
+      </a>
+      <a
+        href="/my-reservations"
+        data-nav-link="my-reservations"
+        class:list={[
+          "px-4 py-2 rounded-lg text-sm font-medium transition-all",
+          pathname === "/my-reservations"
+            ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
+            : "text-slate-300 hover:text-slate-100 hover:bg-slate-800/60",
+        ]}
+      >
+        My Reservations
+      </a>
+      <a
+        href="/admin"
+        data-nav-link="admin"
+        class:list={[
+          "px-4 py-2 rounded-lg text-sm font-medium transition-all",
+          pathname === "/admin"
+            ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
+            : "text-slate-300 hover:text-slate-100 hover:bg-slate-800/60",
+        ]}
+      >
+        Admin Dashboard
+      </a>
+    </div>
+
+    <!-- Right-side auth controls (re-rendered by client script) -->
+    <div class="flex items-center gap-2" data-auth-container>
+      <!-- Default SSR placeholder — overwritten by the client script on hydration. -->
+      <a
+        href="/login"
+        class="btn-ghost-glass text-sm"
+        data-auth-default
+      >
+        Sign In
+      </a>
+      <a
+        href="/register"
+        class="btn-neon text-sm"
+        data-auth-default
+      >
+        Register
+      </a>
+    </div>
+  </nav>
+</header>
+
+<script>
+  // Client-side hydration for the navbar.
+  //
+  // We import the auth store at runtime so this script only runs in the
+  // browser. The store is persistent, so a refresh already has the user
+  // available; we just need to render the right controls.
+  import { $user, $isAuthenticated, $isAdmin, clearSession } from "../store/authStore";
+  import type { User } from "../types/auth";
+
+  // Build the HTML for the right-hand auth controls based on the current
+  // session state. Kept as a string template so the script can swap
+  // contents in a single DOM write without React on the page.
+  function renderAuthControls(user: User | null): string {
+    // Signed out: Sign In + Register.
+    if (!user) {
+      return `
+        <a href="/login" class="btn-ghost-glass text-sm">Sign In</a>
+        <a href="/register" class="btn-neon text-sm">Register</a>
+      `;
+    }
+
+    // Signed in: avatar + name + role badge + logout.
+    const initials = (user.full_name || user.email)
+      .split(/\s+/)
+      .map((part) => part.charAt(0).toUpperCase())
+      .slice(0, 2)
+      .join("");
+
+    const isAdminUser = user.role === "admin";
+    const roleBadgeClass = isAdminUser
+      ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+      : "bg-blue-500/15 text-blue-300 border border-blue-500/30";
+    const roleBadgeLabel = isAdminUser ? "Admin" : "Driver";
+
+    const safeName = escapeHtml(user.full_name);
+    const safeEmail = escapeHtml(user.email);
+
+    return `
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/40 border border-slate-700/50">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
+            ${escapeHtml(initials)}
+          </div>
+          <div class="flex flex-col leading-tight">
+            <span class="text-sm font-semibold text-slate-100">${safeName}</span>
+            <span class="text-xs text-slate-400">${safeEmail}</span>
+          </div>
+        </div>
+        <span class="hidden md:inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${roleBadgeClass}">
+          ${roleBadgeLabel}
+        </span>
+        <button
+          type="button"
+          data-action="logout"
+          class="btn-ghost-glass text-sm hover:!bg-red-500/15 hover:!border-red-500/40 hover:!text-red-300"
+          aria-label="Sign out"
+        >
+          Logout
+        </button>
+      </div>
+    `;
+  }
+
+  // Escape user-controlled strings before injecting into innerHTML.
+  // Critical for preventing XSS through the email/name fields.
+  function escapeHtml(input: string): string {
+    return input
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  // Toggle the Admin Dashboard link visibility based on the current
+  // user role. Drivers never see the admin link.
+  function syncAdminLinkVisibility(admin: boolean): void {
+    const adminLink = document.querySelector<HTMLAnchorElement>(
+      '[data-nav-link="admin"]',
+    );
+    if (!adminLink) return;
+    adminLink.classList.toggle("hidden", !admin);
+  }
+
+  // Wire the freshly-rendered logout button (if any) to clear the
+  // session and redirect to /login. Uses event delegation so we
+  // don't have to rebind after every re-render.
+  function bindLogoutDelegation(): void {
+    const container = document.querySelector<HTMLDivElement>(
+      "[data-auth-container]",
+    );
+    if (!container) return;
+
+    container.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      const button = target.closest<HTMLButtonElement>(
+        '[data-action="logout"]',
+      );
+      if (!button) return;
+      event.preventDefault();
+      handleLogout();
+    });
+  }
+
+  function handleLogout(): void {
+    clearSession();
+    // Show a friendly toast if the global helper is available.
+    const w = window as unknown as {
+      showToast?: (message: string, type?: string) => void;
+    };
+    if (typeof w.showToast === "function") {
+      w.showToast("You have been signed out.", "info");
+    }
+    window.location.href = "/login";
+  }
+
+  // Read the current user from the persistent atom and paint the
+  // auth controls + admin link accordingly.
+  function paint(): void {
+    const container = document.querySelector<HTMLDivElement>(
+      "[data-auth-container]",
+    );
+    if (!container) return;
+
+    const user = $user.get();
+    container.innerHTML = renderAuthControls(user);
+    syncAdminLinkVisibility($isAdmin.get());
+
+    // Keep the auth-only nav links consistent too: if signed out, hide
+    // My Reservations / Admin Dashboard entirely.
+    const myResLink = document.querySelector<HTMLAnchorElement>(
+      '[data-nav-link="my-reservations"]',
+    );
+    if (myResLink) {
+      myResLink.classList.toggle("hidden", !$isAuthenticated.get());
+    }
+  }
+
+  // On first hydration: paint the current state.
+  // On every subsequent change to $user: re-paint.
+  // Nano Stores' listen returns an unsubscribe function we keep for
+  // possible cleanup (Astro will GC this script when the page unloads).
+  paint();
+  bindLogoutDelegation();
+
+  $user.listen(() => {
+    paint();
+  });
+
+  // Quietly satisfy TS that we imported these — we only need their
+  // reactive values via .get(), but importing them wires the computed
+  // dependency graph so future listeners can subscribe if needed.
+  void $isAuthenticated;
+  void $isAdmin;
+</script>

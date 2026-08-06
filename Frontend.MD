@@ -328,7 +328,7 @@ Open `http://localhost:4321`. Navbar renders with brand styling and dynamic user
 ## 📌 Step 5: Authentication Pages (`login.astro` & `register.astro`)
 
 ### 🎯 Objective
-Build interactive Login and Register Astro pages featuring modern dark glassmorphism forms, role selection toggle, quick demo login buttons, and instant client redirects.
+Build interactive Login and Register Astro pages featuring modern dark glassmorphism forms, role selection toggle, quick demo login buttons, and instant client redirects. make it simple but looks professional.
 
 ### 📋 Prerequisites
 - Step 4 completed.

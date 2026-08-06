@@ -77,13 +77,17 @@ func main() {
 		authGroup.POST("/register", authHandler.Register)
 		authGroup.POST("/login", authHandler.Login)
 
+		// --- Public zone catalog (browsing does not require auth) ---
+		// Per Backend.MD Step 5: GET /zones and /zones/:id are public so the
+		// frontend can render availability without forcing a login.
+		e.GET("/api/v1/zones", zoneHandler.List)
+		e.GET("/api/v1/zones/:id", zoneHandler.GetByID)
+
 		// --- Authenticated routes ---
 		auth := middleware.AuthMiddleware(cfg.JWTSecret)
 
-		// Zones: any authenticated user can read; admins mutate.
+		// Zone mutations are admin-only.
 		zoneGroup := e.Group("/api/v1/zones", auth)
-		zoneGroup.GET("", zoneHandler.List)
-		zoneGroup.GET("/:id", zoneHandler.GetByID)
 		zoneGroup.POST("", zoneHandler.Create, middleware.AdminOnly())
 		zoneGroup.PUT("/:id", zoneHandler.Update, middleware.AdminOnly())
 		zoneGroup.DELETE("/:id", zoneHandler.Delete, middleware.AdminOnly())

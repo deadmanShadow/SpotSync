@@ -20,6 +20,8 @@ type ZoneService interface {
 	List() ([]models.ParkingZone, error)
 	Update(id uint, req dto.UpdateZoneRequest) (*models.ParkingZone, error)
 	Delete(id uint) error
+	ListWithAvailability() ([]dto.ZoneResponse, error)
+	GetByIDWithAvailability(id uint) (*dto.ZoneResponse, error)
 }
 
 type zoneService struct {
@@ -93,4 +95,24 @@ func (s *zoneService) Delete(id uint) error {
 		return err
 	}
 	return s.zoneRepo.Delete(id)
+}
+
+// ListWithAvailability returns every parking zone with its dynamically
+// computed AvailableSpots value.
+func (s *zoneService) ListWithAvailability() ([]dto.ZoneResponse, error) {
+	return s.zoneRepo.FindAllWithAvailability()
+}
+
+// GetByIDWithAvailability returns a single parking zone with its dynamically
+// computed AvailableSpots value. Returns ErrZoneNotFound if the zone does
+// not exist.
+func (s *zoneService) GetByIDWithAvailability(id uint) (*dto.ZoneResponse, error) {
+	z, err := s.zoneRepo.FindByIDWithAvailability(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrZoneNotFound
+		}
+		return nil, err
+	}
+	return z, nil
 }

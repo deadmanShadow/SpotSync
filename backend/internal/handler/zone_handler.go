@@ -44,7 +44,7 @@ func (h *ZoneHandler) GetByID(c echo.Context) error {
 	if err != nil {
 		return utils.JSONError(c, http.StatusBadRequest, "Invalid zone id", err.Error())
 	}
-	zone, err := h.zoneService.GetByID(id)
+	zone, err := h.zoneService.GetByIDWithAvailability(id)
 	if err != nil {
 		if errors.Is(err, service.ErrZoneNotFound) {
 			return utils.JSONError(c, http.StatusNotFound, "Zone not found", err.Error())
@@ -56,7 +56,7 @@ func (h *ZoneHandler) GetByID(c echo.Context) error {
 
 // List handles GET /api/v1/zones.
 func (h *ZoneHandler) List(c echo.Context) error {
-	zones, err := h.zoneService.List()
+	zones, err := h.zoneService.ListWithAvailability()
 	if err != nil {
 		return utils.JSONError(c, http.StatusInternalServerError, "Failed to list zones", err.Error())
 	}

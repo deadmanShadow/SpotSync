@@ -23,40 +23,43 @@ backend/
 ├── cmd/
 │   └── api/
 │       └── main.go                  # Entry point (DI wiring & server startup)
-├── config/
-│   └── config.go                # Environment variable loader
-├── database/
-│   └── postgres.go              # Database connection & auto-migrations
-├── dto/
-│   ├── auth_dto.go              # Register, Login DTOs
-│   ├── zone_dto.go              # Zone creation & response DTOs
-│   └── reservation_dto.go       # Reservation DTOs
-├── handler/
-│   ├── auth_handler.go          # Auth HTTP handlers
-│   ├── zone_handler.go          # Parking Zone HTTP handlers
-│   └── reservation_handler.go   # Reservation HTTP handlers
-├── middleware/
-│   ├── auth_middleware.go       # JWT Bearer verification
-│   └── role_middleware.go       # Role-based access control (admin/driver)
-├── models/
-│   ├── user.go                  # User GORM model
-│   ├── parking_zone.go          # Parking Zone GORM model
-│   └── reservation.go           # Reservation GORM model
-├── repository/
-│   ├── user_repository.go       # DB access for Users
-│   ├── zone_repository.go       # DB access for Zones
-│   └── reservation_repository.go# DB access for Reservations (FOR UPDATE locks)
-├── service/
-│   ├── auth_service.go          # Business logic for Auth
-│   ├── zone_service.go          # Business logic for Zones
-│   └── reservation_service.go   # Business logic for Reservations
-├── utils/
-│   ├── context.go               # Echo context helpers
-│   ├── error_handler.go         # Echo central error handler
-│   ├── jwt.go                   # JWT signing & validation
-│   ├── password.go              # Bcrypt hashing utilities
-│   ├── response.go              # Standardized API response formatters
-│   └── validator.go             # Custom struct validator for Echo
+├── internal/
+│   ├── auth/
+│   │   ├── auth_dto.go              # Register, Login DTOs & User response DTOs
+│   │   ├── auth_handler.go          # Auth HTTP handlers
+│   │   ├── auth_service.go          # Business logic for Auth
+│   │   ├── user_repository.go       # DB access for Users
+│   │   └── user.go                  # User GORM model
+│   ├── reservation/
+│   │   ├── reservation_dto.go       # Reservation DTOs
+│   │   ├── reservation_handler.go   # Reservation HTTP handlers
+│   │   ├── reservation_service.go   # Business logic for Reservations
+│   │   ├── reservation_repository.go# DB access for Reservations (FOR UPDATE locks)
+│   │   └── reservation.go           # Reservation GORM model
+│   ├── zone/
+│   │   ├── zone_dto.go              # Zone creation & response DTOs
+│   │   ├── zone_handler.go          # Parking Zone HTTP handlers
+│   │   ├── zone_service.go          # Business logic for Zones
+│   │   ├── zone_repository.go       # DB access for Zones
+│   │   └── parking_zone.go          # Parking Zone GORM model
+│   ├── config/
+│   │   └── config.go                # Environment variable loader
+│   ├── database/
+│   │   └── postgres.go              # Database connection & auto-migrations
+│   └── middleware/
+│       ├── auth_middleware.go       # JWT Bearer verification
+│       └── role_middleware.go       # Role-based access control (admin/driver)
+├── pkg/
+│   └── utils/                       # Shared utilities & helpers
+│       ├── context.go               # Echo context helpers
+│       ├── error_handler.go         # Echo central error handler
+│       ├── jwt.go                   # JWT signing & validation
+│       ├── password.go              # Bcrypt hashing utilities
+│       ├── response.go              # Standardized API response formatters
+│       └── validator.go             # Custom struct validator for Echo
+├── migrations/                      # Database SQL migration files
+├── docs/                            # API documentation & OpenAPI specs
+├── scripts/                         # Build & deployment scripts
 ├── .env.example
 ├── go.mod
 └── go.sum
@@ -76,10 +79,10 @@ Initialize the Go module, install required third-party libraries, set up the pro
 - `backend/go.mod`
 - `backend/.env.example`
 - `backend/.env`
-- `backend/config/config.go`
-- `backend/database/postgres.go`
-- `backend/utils/response.go`
-- `backend/utils/validator.go`
+- `backend/internal/config/config.go`
+- `backend/internal/database/postgres.go`
+- `backend/pkg/utils/response.go`
+- `backend/pkg/utils/validator.go`
 - `backend/cmd/api/main.go`
 
 ### 📝 Step Context & Implementation Details
@@ -93,14 +96,14 @@ Initialize the Go module, install required third-party libraries, set up the pro
    - `github.com/golang-jwt/jwt/v5` (JWT token handling)
    - `golang.org/x/crypto/bcrypt` (Password hashing)
 
-2. **Environment Configuration (`config/config.go`)**
+2. **Environment Configuration (`internal/config/config.go`)**
    Define a `Config` struct holding:
    - `Port` (default `"8080"`)
    - `DBHost`, `DBUser`, `DBPassword`, `DBName`, `DBPort`, `DBSSLMode` (or `DATABASE_URL`)
    - `JWTSecret` (default `"supersecretjwtkey"`)
    Load from `.env` using `godotenv.Load()`.
 
-3. **Database Connection Setup (`database/postgres.go`)**
+3. **Database Connection Setup (`internal/database/postgres.go`)**
    - Implement `ConnectDB(cfg *config.Config) (*gorm.DB, error)`
    - Open GORM connection to PostgreSQL.
    - Configure connection pool:
@@ -108,7 +111,7 @@ Initialize the Go module, install required third-party libraries, set up the pro
      - `SetMaxIdleConns(10)`
      - `SetConnMaxLifetime(15 * time.Minute)`
 
-4. **Standard API Response Wrappers (`utils/response.go`)**
+4. **Standard API Response Wrappers (`pkg/utils/response.go`)**
    Enforce standard API format across the backend:
    - Success Response:
      ```json
@@ -128,7 +131,7 @@ Initialize the Go module, install required third-party libraries, set up the pro
      ```
    Provide helper functions: `JSONSuccess(c echo.Context, code int, message string, data interface{})` and `JSONError(c echo.Context, code int, message string, err string)`.
 
-5. **Custom Echo Validator (`utils/validator.go`)**
+5. **Custom Echo Validator (`pkg/utils/validator.go`)**
    Create a struct `CustomValidator` wrapping `validator.Validate`. Implement `Validate(i interface{}) error` method so Echo can automatically validate request bodies via `c.Validate(req)`.
 
 6. **Entry Point Starter (`cmd/api/main.go`)**
@@ -141,7 +144,7 @@ Initialize the Go module, install required third-party libraries, set up the pro
 
 ### 💻 Execution Commands
 ```bash
-mkdir -p backend/cmd/api backend/config backend/database backend/dto backend/handler backend/middleware backend/models backend/repository backend/service backend/utils
+mkdir -p backend/cmd/api backend/internal/auth backend/internal/reservation backend/internal/zone backend/internal/config backend/internal/database backend/internal/middleware backend/pkg/utils backend/migrations backend/docs backend/scripts
 cd backend
 go mod init spotsync-backend
 go get github.com/labstack/echo/v4
@@ -175,14 +178,14 @@ Define GORM models corresponding to PostgreSQL tables (`users`, `parking_zones`,
 - Step 1 completed.
 
 ### 📁 Files to Create / Modify
-- `backend/models/user.go`
-- `backend/models/parking_zone.go`
-- `backend/models/reservation.go`
-- `backend/database/postgres.go` (Update with AutoMigrate call)
+- `backend/internal/auth/user.go`
+- `backend/internal/zone/parking_zone.go`
+- `backend/internal/reservation/reservation.go`
+- `backend/internal/database/postgres.go` (Update with AutoMigrate call)
 
 ### 📝 Step Context & Implementation Details
 
-1. **User Model (`models/user.go`)**
+1. **User Model (`internal/auth/user.go`)**
    Struct `User`:
    - `ID` (uint, `gorm:"primaryKey;autoIncrement"`)
    - `Name` (string, `gorm:"type:varchar(100);not null"`)
@@ -192,7 +195,7 @@ Define GORM models corresponding to PostgreSQL tables (`users`, `parking_zones`,
    - `CreatedAt` (time.Time)
    - `UpdatedAt` (time.Time)
 
-2. **ParkingZone Model (`models/parking_zone.go`)**
+2. **ParkingZone Model (`internal/zone/parking_zone.go`)**
    Struct `ParkingZone`:
    - `ID` (uint, `gorm:"primaryKey;autoIncrement"`)
    - `Name` (string, `gorm:"type:varchar(100);not null"`)
@@ -201,24 +204,24 @@ Define GORM models corresponding to PostgreSQL tables (`users`, `parking_zones`,
    - `PricePerHour` (float64, `gorm:"type:numeric(10,2);not null"`) — Decimal > 0
    - `CreatedAt` (time.Time)
    - `UpdatedAt` (time.Time)
-   - `Reservations` ([]Reservation, `gorm:"foreignKey:ZoneID"`)
+   - `Reservations` ([]reservation.Reservation, `gorm:"foreignKey:ZoneID"`)
 
-3. **Reservation Model (`models/reservation.go`)**
+3. **Reservation Model (`internal/reservation/reservation.go`)**
    Struct `Reservation`:
    - `ID` (uint, `gorm:"primaryKey;autoIncrement"`)
    - `UserID` (uint, `gorm:"not null;index"`)
-   - `User` (User, `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`)
+   - `User` (auth.User, `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`)
    - `ZoneID` (uint, `gorm:"not null;index"`)
-   - `Zone` (ParkingZone, `gorm:"foreignKey:ZoneID;constraint:OnDelete:CASCADE"`)
+   - `Zone` (zone.ParkingZone, `gorm:"foreignKey:ZoneID;constraint:OnDelete:CASCADE"`)
    - `LicensePlate` (string, `gorm:"type:varchar(15);not null"`)
    - `Status` (string, `gorm:"type:varchar(20);not null;default:'active'"`) — Must be `'active'`, `'completed'`, or `'cancelled'`
    - `CreatedAt` (time.Time)
    - `UpdatedAt` (time.Time)
 
-4. **Auto-Migration Integration (`database/postgres.go`)**
+4. **Auto-Migration Integration (`internal/database/postgres.go`)**
    Add `AutoMigrate(db *gorm.DB) error` function that calls:
    ```go
-   db.AutoMigrate(&models.User{}, &models.ParkingZone{}, &models.Reservation{})
+   db.AutoMigrate(&auth.User{}, &zone.ParkingZone{}, &reservation.Reservation{})
    ```
    Call `database.AutoMigrate(db)` in `main.go` after DB connection.
 
@@ -245,17 +248,17 @@ Implement User Registration (`POST /api/v1/auth/register`) and User Login (`POST
 - Step 2 completed.
 
 ### 📁 Files to Create / Modify
-- `backend/dto/auth_dto.go`
-- `backend/utils/password.go`
-- `backend/utils/jwt.go`
-- `backend/repository/user_repository.go`
-- `backend/service/auth_service.go`
-- `backend/handler/auth_handler.go`
+- `backend/internal/auth/auth_dto.go`
+- `backend/pkg/utils/password.go`
+- `backend/pkg/utils/jwt.go`
+- `backend/internal/auth/user_repository.go`
+- `backend/internal/auth/auth_service.go`
+- `backend/internal/auth/auth_handler.go`
 - `backend/cmd/api/main.go` (Wire dependencies & register auth routes)
 
 ### 📝 Step Context & Implementation Details
 
-1. **Auth DTOs (`dto/auth_dto.go`)**
+1. **Auth DTOs (`internal/auth/auth_dto.go`)**
    - `RegisterRequest`:
      - `Name` (string, `json:"name" validate:"required,min=2,max=100"`)
      - `Email` (string, `json:"email" validate:"required,email"`)
@@ -269,23 +272,23 @@ Implement User Registration (`POST /api/v1/auth/register`) and User Login (`POST
    - `LoginResponse`:
      - `Token` (string `json:"token"`), `User` (UserResponse `json:"user"`)
 
-2. **Password Utility (`utils/password.go`)**
+2. **Password Utility (`pkg/utils/password.go`)**
    - `HashPassword(password string) (string, error)` using `bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)` (cost 10).
    - `CheckPassword(hashedPassword, password string) bool` using `bcrypt.CompareHashAndPassword`.
 
-3. **JWT Utility (`utils/jwt.go`)**
+3. **JWT Utility (`pkg/utils/jwt.go`)**
    - Struct `JWTClaims`: `UserID` (uint), `Role` (string), RegisteredClaims.
    - `GenerateToken(userID uint, role string, secret string) (string, error)`: Signs token with `HS256`, 24-hour expiration.
    - `ValidateToken(tokenStr string, secret string) (*JWTClaims, error)`.
 
-4. **User Repository Interface & Struct (`repository/user_repository.go`)**
+4. **User Repository Interface & Struct (`internal/auth/user_repository.go`)**
    - Interface `UserRepository`:
-     - `Create(user *models.User) error`
-     - `FindByEmail(email string) (*models.User, error)`
-     - `FindByID(id uint) (*models.User, error)`
+     - `Create(user *auth.User) error`
+     - `FindByEmail(email string) (*auth.User, error)`
+     - `FindByID(id uint) (*auth.User, error)`
    - Implement with GORM DB pointer.
 
-5. **Auth Service (`service/auth_service.go`)**
+5. **Auth Service (`internal/auth/auth_service.go`)**
    - Interface `AuthService`:
      - `Register(req dto.RegisterRequest) (*dto.UserResponse, error)`
      - `Login(req dto.LoginRequest) (*dto.LoginResponse, error)`
@@ -296,7 +299,7 @@ Implement User Registration (`POST /api/v1/auth/register`) and User Login (`POST
      - Save user model.
      - Login verifies email existence, compares bcrypt password, and generates JWT with `user_id` and `role`.
 
-6. **Auth Handler (`handler/auth_handler.go`)**
+6. **Auth Handler (`internal/auth/auth_handler.go`)**
    - `Register(c echo.Context) error`:
      - Bind DTO, call `c.Validate(req)`. Return 400 if validation fails.
      - Call `authService.Register(req)`.
@@ -307,7 +310,7 @@ Implement User Registration (`POST /api/v1/auth/register`) and User Login (`POST
      - Return `200 OK` with `utils.JSONSuccess`.
 
 7. **Dependency Injection & Route Wiring (`cmd/api/main.go`)**
-   Instantiate: `userRepo := repository.NewUserRepository(db)` → `authService := service.NewAuthService(userRepo, cfg)` → `authHandler := handler.NewAuthHandler(authService)`.
+   Instantiate: `userRepo := auth.NewUserRepository(db)` → `authService := auth.NewAuthService(userRepo, cfg)` → `authHandler := auth.NewAuthHandler(authService)`.
    Register Routes:
    - `POST /api/v1/auth/register`
    - `POST /api/v1/auth/login`
@@ -354,17 +357,17 @@ Create secure middleware for Echo framework to protect endpoints. Parse standard
 - Step 3 completed.
 
 ### 📁 Files to Create / Modify
-- `backend/middleware/auth_middleware.go`
-- `backend/middleware/role_middleware.go`
-- `backend/utils/context.go`
+- `backend/internal/middleware/auth_middleware.go`
+- `backend/internal/middleware/role_middleware.go`
+- `backend/pkg/utils/context.go`
 
 ### 📝 Step Context & Implementation Details
 
-1. **Context Helpers (`utils/context.go`)**
+1. **Context Helpers (`pkg/utils/context.go`)**
    - `GetUserID(c echo.Context) (uint, error)`: Extracts `user_id` set in Echo context. Return error if missing/invalid type.
    - `GetUserRole(c echo.Context) (string, error)`: Extracts `role` set in Echo context.
 
-2. **JWT Auth Middleware (`middleware/auth_middleware.go`)**
+2. **JWT Auth Middleware (`internal/middleware/auth_middleware.go`)**
    - `JWTMiddleware(jwtSecret string) echo.MiddlewareFunc`:
      - Reads header `Authorization`. If missing or doesn't start with `"Bearer "`, return `401 Unauthorized` using `utils.JSONError`.
      - Extracts raw token string, calls `utils.ValidateToken(tokenStr, jwtSecret)`.
@@ -372,7 +375,7 @@ Create secure middleware for Echo framework to protect endpoints. Parse standard
      - Set claims into Echo context: `c.Set("user_id", claims.UserID)` and `c.Set("role", claims.Role)`.
      - Call `next(c)`.
 
-3. **Role Authorization Middleware (`middleware/role_middleware.go`)**
+3. **Role Authorization Middleware (`internal/middleware/role_middleware.go`)**
    - `RequireRole(allowedRoles ...string) echo.MiddlewareFunc`:
      - Retrieves `role` from Echo context using `utils.GetUserRole(c)`.
      - Checks if user role is included in `allowedRoles`.
@@ -399,15 +402,15 @@ Implement Parking Zone management: Admin creation (`POST /api/v1/zones`), Public
 - Step 4 completed.
 
 ### 📁 Files to Create / Modify
-- `backend/dto/zone_dto.go`
-- `backend/repository/zone_repository.go`
-- `backend/service/zone_service.go`
-- `backend/handler/zone_handler.go`
+- `backend/internal/zone/zone_dto.go`
+- `backend/internal/zone/zone_repository.go`
+- `backend/internal/zone/zone_service.go`
+- `backend/internal/zone/zone_handler.go`
 - `backend/cmd/api/main.go` (Wire zone module routes)
 
 ### 📝 Step Context & Implementation Details
 
-1. **Zone DTOs (`dto/zone_dto.go`)**
+1. **Zone DTOs (`internal/zone/zone_dto.go`)**
    - `CreateZoneRequest`:
      - `Name` (string `json:"name" validate:"required,min=3,max=100"`)
      - `Type` (string `json:"type" validate:"required,oneof=general ev_charging covered"`)
@@ -423,12 +426,12 @@ Implement Parking Zone management: Admin creation (`POST /api/v1/zones`), Public
      - `CreatedAt` (time.Time `json:"created_at"`)
      - `UpdatedAt` (time.Time `json:"updated_at,omitempty"`)
 
-2. **Zone Repository (`repository/zone_repository.go`)**
+2. **Zone Repository (`internal/zone/zone_repository.go`)**
    - Interface `ZoneRepository`:
-     - `Create(zone *models.ParkingZone) error`
+     - `Create(zone *zone.ParkingZone) error`
      - `FindAllWithAvailability() ([]dto.ZoneResponse, error)`
      - `FindByIDWithAvailability(id uint) (*dto.ZoneResponse, error)`
-     - `FindByID(id uint) (*models.ParkingZone, error)`
+     - `FindByID(id uint) (*zone.ParkingZone, error)`
    - Calculation Logic for `available_spots`:
      Use GORM subquery or join query counting active reservations for each zone:
      ```sql
@@ -438,13 +441,13 @@ Implement Parking Zone management: Admin creation (`POST /api/v1/zones`), Public
      FROM parking_zones pz
      ```
 
-3. **Zone Service (`service/zone_service.go`)**
+3. **Zone Service (`internal/zone/zone_service.go`)**
    - Interface `ZoneService`:
      - `CreateZone(req dto.CreateZoneRequest) (*dto.ZoneResponse, error)`
      - `GetAllZones() ([]dto.ZoneResponse, error)`
      - `GetZoneByID(id uint) (*dto.ZoneResponse, error)`
 
-4. **Zone Handler (`handler/zone_handler.go`)**
+4. **Zone Handler (`internal/zone/zone_handler.go`)**
    - `CreateZone`: Validate DTO, call service, return `201 Created`.
    - `GetAllZones`: Call service, return `200 OK`.
    - `GetZoneByID`: Extract `id` path param, call service, return `200 OK` (or `404 Not Found`).
@@ -496,15 +499,15 @@ Implement the core reservation logic with **Row-Level DB Locking (`FOR UPDATE`)*
 - Step 5 completed.
 
 ### 📁 Files to Create / Modify
-- `backend/dto/reservation_dto.go`
-- `backend/repository/reservation_repository.go`
-- `backend/service/reservation_service.go`
-- `backend/handler/reservation_handler.go`
+- `backend/internal/reservation/reservation_dto.go`
+- `backend/internal/reservation/reservation_repository.go`
+- `backend/internal/reservation/reservation_service.go`
+- `backend/internal/reservation/reservation_handler.go`
 - `backend/cmd/api/main.go` (Wire reservation endpoints)
 
 ### 📝 Step Context & Implementation Details
 
-1. **Reservation DTOs (`dto/reservation_dto.go`)**
+1. **Reservation DTOs (`internal/reservation/reservation_dto.go`)**
    - `CreateReservationRequest`:
      - `ZoneID` (uint `json:"zone_id" validate:"required"`)
      - `LicensePlate` (string `json:"license_plate" validate:"required,min=2,max=15"`)
@@ -519,15 +522,15 @@ Implement the core reservation logic with **Row-Level DB Locking (`FOR UPDATE`)*
      - `CreatedAt` (time.Time `json:"created_at"`)
      - `UpdatedAt` (time.Time `json:"updated_at"`)
 
-2. **CRITICAL Concurrency Implementation in Reservation Repository (`repository/reservation_repository.go`)**
-   Implement `CreateReservation(userID uint, zoneID uint, licensePlate string) (*models.Reservation, error)`:
+2. **CRITICAL Concurrency Implementation in Reservation Repository (`internal/reservation/reservation_repository.go`)**
+   Implement `CreateReservation(userID uint, zoneID uint, licensePlate string) (*reservation.Reservation, error)`:
    ```go
-   var reservation models.Reservation
+   var res reservation.Reservation
    
    err := r.db.Transaction(func(tx *gorm.DB) error {
-       var zone models.ParkingZone
+       var z zone.ParkingZone
        // 1. ROW-LEVEL LOCKING: Lock parking zone record using FOR UPDATE
-       if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&zone, zoneID).Error; err != nil {
+       if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&z, zoneID).Error; err != nil {
            if errors.Is(err, gorm.ErrRecordNotFound) {
                return errors.New("parking zone not found")
            }
@@ -536,25 +539,25 @@ Implement the core reservation logic with **Row-Level DB Locking (`FOR UPDATE`)*
    
        // 2. Count active reservations for this zone
        var activeCount int64
-       if err := tx.Model(&models.Reservation{}).
+       if err := tx.Model(&reservation.Reservation{}).
            Where("zone_id = ? AND status = ?", zoneID, "active").
            Count(&activeCount).Error; err != nil {
            return err
        }
    
-       // 3. CAPACITY CHECK: If activeCount >= zone.TotalCapacity, return custom conflict error
-       if int(activeCount) >= zone.TotalCapacity {
+       // 3. CAPACITY CHECK: If activeCount >= z.TotalCapacity, return custom conflict error
+       if int(activeCount) >= z.TotalCapacity {
            return errors.New("parking zone is full") // Maps to 409 Conflict
        }
    
        // 4. Create new reservation record
-       reservation = models.Reservation{
+       res = reservation.Reservation{
            UserID:       userID,
            ZoneID:       zoneID,
            LicensePlate: licensePlate,
            Status:       "active",
        }
-       if err := tx.Create(&reservation).Error; err != nil {
+       if err := tx.Create(&res).Error; err != nil {
            return err
        }
    
@@ -563,21 +566,21 @@ Implement the core reservation logic with **Row-Level DB Locking (`FOR UPDATE`)*
    ```
 
 3. **Additional Repository Methods**
-   - `FindByUserID(userID uint) ([]models.Reservation, error)` with `Preload("Zone")`.
-   - `FindByID(id uint) (*models.Reservation, error)`.
+   - `FindByUserID(userID uint) ([]reservation.Reservation, error)` with `Preload("Zone")`.
+   - `FindByID(id uint) (*reservation.Reservation, error)`.
    - `CancelReservation(id uint, userID uint, isAdmin bool) error`:
      - Checks if reservation exists.
      - If not admin and `reservation.UserID != userID`, return forbidden error.
      - Update `status` to `"cancelled"`.
-   - `FindAll() ([]models.Reservation, error)` with `Preload("Zone")` and `Preload("User")`.
+   - `FindAll() ([]reservation.Reservation, error)` with `Preload("Zone")` and `Preload("User")`.
 
-4. **Reservation Service (`service/reservation_service.go`)**
+4. **Reservation Service (`internal/reservation/reservation_service.go`)**
    - `CreateReservation(userID uint, req dto.CreateReservationRequest)`: Call repo transaction. Map full error string ("parking zone is full" -> 409 status code).
    - `GetMyReservations(userID uint)`: Fetch driver reservations.
    - `CancelReservation(id uint, userID uint, userRole string)`: Check permission & cancel.
    - `GetAllReservations()`: Admin view of all reservations.
 
-5. **Reservation Handler (`handler/reservation_handler.go`)**
+5. **Reservation Handler (`internal/reservation/reservation_handler.go`)**
    - `CreateReservation`: Bind & validate DTO, get `userID` from Echo context, call service.
    - `GetMyReservations`: Get `userID` from Echo context, call service.
    - `CancelReservation`: Get `id` from URL param, `userID` & `role` from context, call service.
@@ -636,12 +639,12 @@ Configure standard Echo central HTTP error handler to catch invalid JSON, route 
 - Step 6 completed.
 
 ### 📁 Files to Create / Modify
-- `backend/utils/error_handler.go`
+- `backend/pkg/utils/error_handler.go`
 - `backend/cmd/api/main.go` (Attach error handler & CORS middleware)
 
 ### 📝 Step Context & Implementation Details
 
-1. **Central HTTP Error Handler (`utils/error_handler.go`)**
+1. **Central HTTP Error Handler (`pkg/utils/error_handler.go`)**
    ```go
    func CustomHTTPErrorHandler(err error, c echo.Context) {
        code := http.StatusInternalServerError

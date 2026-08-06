@@ -77,7 +77,14 @@
       "Bash(powershell -NoProfile -Command \"Get-Process spotsync-api -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host killed\")",
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File run_race.ps1 2>&1)",
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File final_verify.ps1 2>&1)",
-      "Bash(powershell -NoProfile -Command \"Get-Process spotsync-api -ErrorAction SilentlyContinue | Stop-Process -Force\")"
+      "Bash(powershell -NoProfile -Command \"Get-Process spotsync-api -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(cd /d E:DevprojectsmyprojectSpotsyncbackend)",
+      "Bash(echo \"EXIT_CODE: $?\")",
+      "Bash(ADMIN_TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo4LCJyb2xlIjoiYWRtaW4iLCJleHAiOjE3ODYxMTkyNzUsIm5iZiI6MTc4NjAzMjg3NSwiaWF0IjoxNzg2MDMyODc1fQ.tF4UDOr7-MKknMI76Krgs2LoXdn6WfiRzgwux9tBojQ\")",
+      "Bash(DRIVER_TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo3LCJyb2xlIjoiZHJpdmVyIiwiZXhwIjoxNzg2MTE5MjcyLCJuYmYiOjE3ODYwMzI4NzIsImlhdCI6MTc4NjAzMjg3Mn0.bsKagKGDgxXQY4b1yX2c3QsLWo8W8UeZSdzqKiC5xZA\")",
+      "Bash(ADMIN_TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo4LCJyb2xlIjoiYWRtaW4iLCJleHAiOjE3ODYxMTkyNzUsIm5iZiI6MTc4NjAzMjg3NSwiaWF0IjoxNzg2MDMyODc1fQ.tF4UDOr7-MKknMI76Krgs2LoXdn6WfiRzgwux9tBojQ\" curl -s http://localhost:8080/api/v1/reservations -H \"Authorization: Bearer $ADMIN_TOKEN\" -w \"\\\\nHTTP_STATUS:%{http_code}\\\\n\")",
+      "Bash(powershell.exe -Command \"Get-Process -Name spotsync-api -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \"E:/Dev/projects/myproject/Spotsync/backend/kill_server.ps1\")"
     ]
   }
 }

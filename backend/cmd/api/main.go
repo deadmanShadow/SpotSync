@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	echomw "github.com/labstack/echo/v4/middleware"
 
 	"spotsync-backend/internal/config"
 	"spotsync-backend/internal/database"
@@ -31,6 +32,42 @@ func main() {
 	e := echo.New()
 	e.HideBanner = true
 	e.Validator = utils.NewValidator()
+
+	// Central HTTP error handler — wraps all errors (route 404s, validation
+	// failures, panic recoveries, manually thrown errors) into our standard
+	// JSON envelope. Must be attached BEFORE the server starts accepting
+	// traffic.
+	e.HTTPErrorHandler = utils.CustomHTTPErrorHandler
+
+	// Echo's router short-circuits to the package-level `echo.NotFoundHandler`
+	// for missing routes (the HTTPErrorHandler chain IS still invoked when
+	// that handler returns an error, but we override the message here so it
+	// is friendlier than Echo's default empty `*HTTPError`).
+	echo.NotFoundHandler = func(c echo.Context) error {
+		return echo.NewHTTPError(http.StatusNotFound, "The requested resource was not found")
+	}
+
+	// Step 7 middleware: logging, panic recovery, and CORS so the frontend
+	// (any origin) can call the API with credentials and the standard
+	// Authorization / Content-Type headers.
+	e.Use(echomw.Logger())
+	e.Use(echomw.Recover())
+	e.Use(echomw.CORSWithConfig(echomw.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowHeaders: []string{
+			echo.HeaderOrigin,
+			echo.HeaderContentType,
+			echo.HeaderAccept,
+			echo.HeaderAuthorization,
+		},
+		AllowMethods: []string{
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodDelete,
+			http.MethodOptions,
+		},
+	}))
 
 	// 3. Health check route (public)
 	e.GET("/health", func(c echo.Context) error {

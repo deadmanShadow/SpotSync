@@ -39,9 +39,12 @@ func main() {
 		log.Printf("WARNING: Database connection failed: %v", err)
 		log.Println("Server will continue running but DB-dependent endpoints will not work.")
 	} else {
-		// Auto-migration will be wired in Step 2
-		_ = db
-		log.Println("Database is ready")
+		// Run GORM auto-migrations for the domain models.
+		if err := database.AutoMigrate(db); err != nil {
+			log.Printf("WARNING: Auto-migration failed: %v", err)
+		} else {
+			log.Println("Database is ready")
+		}
 	}
 
 	// 5. Start server with graceful shutdown

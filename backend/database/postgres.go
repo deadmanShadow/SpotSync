@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"spotsync-backend/config"
+	"spotsync-backend/models"
 )
 
 // ConnectDB opens a GORM connection to PostgreSQL using the supplied
@@ -37,4 +38,19 @@ func ConnectDB(cfg *config.Config) (*gorm.DB, error) {
 	log.Println("Database connection established successfully")
 
 	return db, nil
+}
+
+// AutoMigrate runs GORM auto-migrations for every domain model so the
+// corresponding PostgreSQL tables (and their constraints/indexes) exist
+// before the HTTP server starts handling traffic.
+func AutoMigrate(db *gorm.DB) error {
+	if err := db.AutoMigrate(
+		&models.User{},
+		&models.ParkingZone{},
+		&models.Reservation{},
+	); err != nil {
+		return fmt.Errorf("auto-migration failed: %w", err)
+	}
+	log.Println("Database auto-migration completed successfully")
+	return nil
 }

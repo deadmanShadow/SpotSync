@@ -1,6 +1,6 @@
 # 🎨 SpotSync Frontend — Step-by-Step Implementation Guide (Astro + TypeScript) for Puku CLI
 
-> **Target Platform:** Astro 4+ (TypeScript + Tailwind CSS + Nano Stores + Lucide SVG Icons + Native Fetch API)  
+> **Target Platform:** Astro 4+ (TypeScript + Tailwind CSS + ShadCN + Nano Stores + Lucide SVG Icons + Native Fetch API)  
 > **Design Theme:** Dark Mode Glassmorphism (Deep Slate background, Neon EV Green `#10b981` accents, Electric Blue `#3b82f6` highlights)  
 > **Key Features:** Client-side hydration with Nano Stores, Role-based view guards (Driver & Admin), Dynamic Zone Availability visual progress bars, Concurrency-aware Spot Reservation modal, Driver Reservation history dashboard, Admin Zone creation & System monitor table.
 
@@ -16,7 +16,7 @@ When instructed to implement a step (e.g., `"Implement Step 1 of Frontend.MD"`):
 
 ---
 
-## 📁 Frontend Directory Blueprint (Astro + TypeScript)
+## 📁 Frontend Directory Blueprint (Astro + TypeScript + Shadcn UI)
 
 ```
 frontend/
@@ -24,6 +24,14 @@ frontend/
 │   └── favicon.svg
 ├── src/
 │   ├── components/
+│   │   ├── ui/                        # Shadcn UI primitive components
+│   │   │   ├── button.tsx             # Shadcn Button component
+│   │   │   ├── card.tsx               # Shadcn Card component
+│   │   │   ├── dialog.tsx             # Shadcn Dialog component
+│   │   │   ├── input.tsx              # Shadcn Input component
+│   │   │   ├── progress.tsx           # Shadcn Progress component
+│   │   │   ├── table.tsx              # Shadcn Table component
+│   │   │   └── badge.tsx              # Shadcn Badge component
 │   │   ├── Navbar.astro               # Top navigation bar with dynamic client state
 │   │   ├── ZoneCard.astro             # Zone card component with dynamic capacity bar
 │   │   ├── ZoneFilter.astro           # Type filter tabs & search input
@@ -33,6 +41,8 @@ frontend/
 │   │   └── AdminReservationTable.astro# Admin table monitor of all system bookings
 │   ├── layouts/
 │   │   └── Layout.astro               # Core Astro page container layout & toast script
+│   ├── lib/
+│   │   └── utils.ts                   # Shadcn utility helper (cn classnames merger)
 │   ├── pages/
 │   │   ├── index.astro                # Public/Driver landing page & zone catalog
 │   │   ├── login.astro                # User login page
@@ -47,7 +57,7 @@ frontend/
 │   ├── store/
 │   │   └── authStore.ts               # Nano Stores for reactive client auth state
 │   ├── styles/
-│   │   └── global.css                 # Tailwind CSS imports & glassmorphism utilities
+│   │   └── global.css                 # Tailwind CSS & Shadcn dark theme variables
 │   ├── types/
 │   │   ├── auth.ts                    # User & Auth interfaces
 │   │   ├── zone.ts                    # Zone interfaces
@@ -57,6 +67,7 @@ frontend/
 ├── .env.example
 ├── .env
 ├── astro.config.mjs
+├── components.json                    # Shadcn UI configuration file
 ├── package.json
 ├── tailwind.config.mjs
 └── tsconfig.json
@@ -64,10 +75,10 @@ frontend/
 
 ---
 
-## 📌 Step 1: Astro Project Initialization & Design System Setup
+## 📌 Step 1: Astro Project Initialization & Design System Setup (with Shadcn UI)
 
 ### 🎯 Objective
-Initialize an Astro TypeScript project, install dependencies (`@astrojs/tailwind`, `tailwindcss`, `nanostores`, `@nanostores/persistent`), configure Tailwind CSS with custom glassmorphism tokens, setup environment variables, and create folder structure.
+Initialize an Astro TypeScript project, install `@astrojs/tailwind`, `@astrojs/react`, React, Tailwind CSS, Shadcn UI (`components.json`, `src/lib/utils.ts`, `src/components/ui/`), `nanostores`, `@nanostores/persistent`, configure Tailwind CSS with custom glassmorphism tokens and Shadcn variables, setup environment variables to ensure the frontend connects to the backend through proper CORS configuration at project initialization, and create folder structure.
 
 ### 📋 Prerequisites
 - Node.js 18+ installed.
@@ -76,7 +87,11 @@ Initialize an Astro TypeScript project, install dependencies (`@astrojs/tailwind
 - `frontend/package.json`
 - `frontend/astro.config.mjs`
 - `frontend/tailwind.config.mjs`
+- `frontend/tsconfig.json`
+- `frontend/components.json`
+- `frontend/src/lib/utils.ts`
 - `frontend/src/styles/global.css`
+- `frontend/src/components/ui/` (primitives: `button.tsx`, `card.tsx`, `dialog.tsx`, `input.tsx`, `progress.tsx`, `table.tsx`, `badge.tsx`)
 - `frontend/.env`
 - `frontend/.env.example`
 - `frontend/src/env.d.ts`
@@ -86,28 +101,58 @@ Initialize an Astro TypeScript project, install dependencies (`@astrojs/tailwind
 1. **Astro Initialization & Package Setup (`package.json`)**
    Dependencies:
    - `astro` (Astro core framework)
-   - `@astrojs/tailwind` (Tailwind CSS integration for Astro)
-   - `tailwindcss` & `autoprefixer`
+   - `@astrojs/tailwind` & `@astrojs/react` (Integrations for Tailwind CSS and React)
+   - `react` & `react-dom` (React renderer for Shadcn UI components)
+   - `clsx`, `tailwind-merge`, `class-variance-authority`, `lucide-react`, `tailwindcss-animate` (Shadcn UI engine)
    - `nanostores` & `@nanostores/persistent` (Lightweight client-side reactive state)
 
 2. **Astro Configuration (`astro.config.mjs`)**
    ```js
    import { defineConfig } from 'astro/config';
    import tailwind from '@astrojs/tailwind';
+   import react from '@astrojs/react';
 
    export default defineConfig({
-     integrations: [tailwind()],
+     integrations: [tailwind(), react()],
      output: 'static', // Build static output with client-side hydration scripts
    });
    ```
 
-3. **Tailwind & Custom CSS (`src/styles/global.css`)**
-   Define dark glassmorphism aesthetic:
+3. **TypeScript Path Aliases (`tsconfig.json`)**
+   Ensure `@/*` path alias maps to `./src/*` for Shadcn UI component resolution:
+   ```json
+   {
+     "extends": "astro/tsconfigs/strict",
+     "compilerOptions": {
+       "baseUrl": ".",
+       "paths": {
+         "@/*": ["./src/*"]
+       }
+     }
+   }
+   ```
+
+4. **Shadcn Utility Helper (`src/lib/utils.ts`)**
+   ```typescript
+   import { clsx, type ClassValue } from "clsx";
+   import { twMerge } from "tailwind-merge";
+
+   export function cn(...inputs: ClassValue[]) {
+     return twMerge(clsx(inputs));
+   }
+   ```
+
+5. **Shadcn Config (`components.json`)**
+   Define component alias mappings (`@/components` and `@/lib/utils`).
+
+6. **Tailwind & Custom Shadcn Dark Theme (`src/styles/global.css`)**
+   Define dark glassmorphism aesthetic & Shadcn CSS variables:
    - Background: Slate 950 `#020617` / Slate 900 `#0f172a`.
    - Cards: `.glass-card` (`bg-slate-900/80 backdrop-blur-md border border-slate-800/80 rounded-2xl`).
    - Accents: Neon EV Green `#10b981`, Electric Blue `#3b82f6`, Warning Amber `#f59e0b`, Danger Coral `#ef4444`.
 
-4. **Environment Variables (`.env`)**
+7. **Environment Variables & Backend CORS Connection (`.env`)**
+   Ensure the frontend is configured to connect to the backend through the proper CORS setup at project initialization:
    ```env
    PUBLIC_API_BASE_URL=http://localhost:8080/api/v1
    ```
@@ -116,8 +161,11 @@ Initialize an Astro TypeScript project, install dependencies (`@astrojs/tailwind
 ```bash
 npm create astro@latest frontend -- --template bare --typescript strict
 cd frontend
-npm install @astrojs/tailwind tailwindcss autoprefixer nanostores @nanostores/persistent
-mkdir -p src/components src/layouts src/pages src/services src/store src/styles src/types
+npm install @astrojs/tailwind @astrojs/react react react-dom tailwindcss autoprefixer tailwindcss-animate clsx tailwind-merge class-variance-authority lucide-react nanostores @nanostores/persistent
+npm install -D @types/react @types/react-dom
+npx shadcn@latest init
+npx shadcn@latest add button card dialog input progress table badge
+mkdir -p src/components/ui src/layouts src/lib src/pages src/services src/store src/styles src/types
 ```
 
 ### ✅ Step 1 Verification

@@ -9,135 +9,22 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/labstack/echo/v4"
-	echomw "github.com/labstack/echo/v4/middleware"
-
 	"spotsync-backend/internal/config"
-	"spotsync-backend/internal/database"
-	"spotsync-backend/internal/handler"
-	"spotsync-backend/internal/middleware"
-	"spotsync-backend/internal/repository"
-	"spotsync-backend/internal/service"
-	"spotsync-backend/pkg/utils"
+	"spotsync-backend/internal/server"
 )
 
+// main is only invoked when running the binary locally (`go run` or the
+// compiled executable). On Vercel, the platform imports `api/index.go`
+// and reads the exported `http.Handler` directly, so the long-running
+// server only exists in local development.
 func main() {
-	// 1. Load configuration
+	// Build (or reuse) the shared Echo instance.
+	e := server.Get()
+
+	// Load config just for the port + graceful shutdown.
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
-	}
-
-	// 2. Initialize Echo
-	e := echo.New()
-	e.HideBanner = true
-	e.Validator = utils.NewValidator()
-
-	// Central HTTP error handler — wraps all errors (route 404s, validation
-	// failures, panic recoveries, manually thrown errors) into our standard
-	// JSON envelope. Must be attached BEFORE the server starts accepting
-	// traffic.
-	e.HTTPErrorHandler = utils.CustomHTTPErrorHandler
-
-	// Echo's router short-circuits to the package-level `echo.NotFoundHandler`
-	// for missing routes (the HTTPErrorHandler chain IS still invoked when
-	// that handler returns an error, but we override the message here so it
-	// is friendlier than Echo's default empty `*HTTPError`).
-	echo.NotFoundHandler = func(c echo.Context) error {
-		return echo.NewHTTPError(http.StatusNotFound, "The requested resource was not found")
-	}
-
-	// Step 7 middleware: logging, panic recovery, and CORS so the frontend
-	// (any origin) can call the API with credentials and the standard
-	// Authorization / Content-Type headers.
-	e.Use(echomw.Logger())
-	e.Use(echomw.Recover())
-	e.Use(echomw.CORSWithConfig(echomw.CORSConfig{
-		AllowOrigins: []string{"*"},
-		AllowHeaders: []string{
-			echo.HeaderOrigin,
-			echo.HeaderContentType,
-			echo.HeaderAccept,
-			echo.HeaderAuthorization,
-		},
-		AllowMethods: []string{
-			http.MethodGet,
-			http.MethodPost,
-			http.MethodPut,
-			http.MethodDelete,
-			http.MethodOptions,
-		},
-	}))
-
-	// 3. Health check route (public)
-	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{"status": "UP"})
-	})
-
-	// 4. Connect to the database. We do this BEFORE the server starts so the
-	// route registration block below can be entered when the connection is
-	// healthy. Auto-migration is run in a background goroutine because it can
-	// be slow on remote databases (e.g. Neon) and we don't want it to delay
-	// the HTTP server start.
-	db, err := database.ConnectDB(cfg)
-	if err != nil {
-		log.Printf("WARNING: Database connection failed: %v", err)
-		log.Println("Server will continue running but DB-dependent endpoints will not work.")
-	} else {
-		// Repositories
-		userRepo := repository.NewUserRepository(db)
-		zoneRepo := repository.NewZoneRepository(db)
-		reservationRepo := repository.NewReservationRepository(db)
-
-		// Services
-		authService := service.NewAuthService(userRepo, cfg.JWTSecret)
-		zoneService := service.NewZoneService(zoneRepo)
-		reservationService := service.NewReservationService(reservationRepo)
-
-		// Handlers
-		authHandler := handler.NewAuthHandler(authService)
-		zoneHandler := handler.NewZoneHandler(zoneService)
-		reservationHandler := handler.NewReservationHandler(reservationService)
-
-		// Run GORM auto-migrations in the background so the server can
-		// accept traffic immediately.
-		go func() {
-			if err := database.AutoMigrate(db); err != nil {
-				log.Printf("WARNING: Auto-migration failed: %v", err)
-			} else {
-				log.Println("Database migrations applied successfully")
-			}
-		}()
-
-		// --- Public auth routes ---
-		authGroup := e.Group("/api/v1/auth")
-		authGroup.POST("/register", authHandler.Register)
-		authGroup.POST("/login", authHandler.Login)
-
-		// --- Public zone catalog (browsing does not require auth) ---
-		// Per Backend.MD Step 5: GET /zones and /zones/:id are public so the
-		// frontend can render availability without forcing a login.
-		e.GET("/api/v1/zones", zoneHandler.List)
-		e.GET("/api/v1/zones/:id", zoneHandler.GetByID)
-
-		// --- Authenticated routes ---
-		auth := middleware.AuthMiddleware(cfg.JWTSecret)
-
-		// Zone mutations are admin-only.
-		zoneGroup := e.Group("/api/v1/zones", auth)
-		zoneGroup.POST("", zoneHandler.Create, middleware.AdminOnly())
-		zoneGroup.PUT("/:id", zoneHandler.Update, middleware.AdminOnly())
-		zoneGroup.DELETE("/:id", zoneHandler.Delete, middleware.AdminOnly())
-
-		// Reservations: any authenticated user can manage their own; admins
-		// can see/modify all.
-		reservationGroup := e.Group("/api/v1/reservations", auth)
-		reservationGroup.GET("/mine", reservationHandler.ListMine)
-		reservationGroup.GET("", reservationHandler.ListAll, middleware.AdminOnly())
-		reservationGroup.GET("/:id", reservationHandler.GetByID)
-		reservationGroup.POST("", reservationHandler.Create)
-		reservationGroup.PATCH("/:id/status", reservationHandler.UpdateStatus)
-		reservationGroup.DELETE("/:id", reservationHandler.Delete)
 	}
 
 	// 5. Start server with graceful shutdown

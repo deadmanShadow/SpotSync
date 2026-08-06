@@ -1,0 +1,56 @@
+---
+import "@/styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title = "SpotSync — Smart Parking & EV Charging", description = "SpotSync is a modern parking and EV charging reservation platform." } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen text-slate-100 font-sans antialiased">
+    <slot />
+
+    <!-- Toast notification container -->
+    <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <script>
+      // Lightweight global toast helper exposed as window.showToast
+      type ToastType = "success" | "error" | "info";
+      function showToast(message: string, type: ToastType = "info", duration = 3500) {
+        const container = document.getElementById("toast-container");
+        if (!container) return;
+
+        const toast = document.createElement("div");
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+
+        window.setTimeout(() => {
+          toast.style.opacity = "0";
+          toast.style.transition = "opacity 0.3s ease";
+          window.setTimeout(() => toast.remove(), 300);
+        }, duration);
+      }
+
+      (window as unknown as { showToast: typeof showToast }).showToast = showToast;
+    </script>
+  </body>
+</html>

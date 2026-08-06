@@ -2,7 +2,7 @@
 
 > **Target Platform:** Astro 4+ (TypeScript + Tailwind CSS + ShadCN + Nano Stores + Lucide SVG Icons + Native Fetch API)  
 > **Design Theme:** Dark Mode Glassmorphism (Deep Slate background, Neon EV Green `#10b981` accents, Electric Blue `#3b82f6` highlights)  
-> **Key Features:** Client-side hydration with Nano Stores, Role-based view guards (Driver & Admin), Dynamic Zone Availability visual progress bars, Concurrency-aware Spot Reservation modal, Driver Reservation history dashboard, Admin Zone creation & System monitor table.
+> **Key Features:** Client-side hydration with Nano Stores, Role-based view guards (Driver & Admin), Intuitive & At-a-Glance Home Landing Page, Dynamic Zone Availability visual progress bars, Concurrency-aware Spot Reservation modal, Driver Reservation history dashboard, Admin Zone creation & System monitor table.
 
 ---
 
@@ -367,7 +367,7 @@ Navigate to `http://localhost:4321/register` and `http://localhost:4321/login`. 
 ## 📌 Step 6: Zone Catalog, Dynamic Spot Calculations & Reserve Modal
 
 ### 🎯 Objective
-Build the main Parking Zone catalog page (`index.astro`), Zone Card component with visual capacity bars (`ZoneCard.astro`), Filter bar (`ZoneFilter.astro`), and the Concurrency-Aware Spot Reservation Modal (`ReserveModal.astro`).
+Build an intuitive, user-friendly home page (`index.astro`) that immediately conveys the website's purpose at a glance (real-time smart parking and EV charging reservation platform), complete with the Zone catalog, visual capacity bars (`ZoneCard.astro`), interactive filter bar (`ZoneFilter.astro`), and concurrency-aware spot reservation modal (`ReserveModal.astro`).
 
 ### 📋 Prerequisites
 - Step 5 completed.
@@ -402,11 +402,25 @@ Build the main Parking Zone catalog page (`index.astro`), Zone Card component wi
    - Input: Vehicle License Plate (`license_plate`).
    - `<script>`: Submit form → send request to `reservationService.createReservation()` → handle `409 Conflict` (Zone is full) gracefully with error notice → close modal & reload zones on success.
 
-4. **Home Page (`src/pages/index.astro`)**
-   - Hero banner: "Smart Parking & EV Charging Reservation".
-   - Stats Counter bar (Total Zones, Available EV Spots).
-   - Filter Tabs: `All Zones`, `⚡ EV Charging`, `🚗 General`, `🛡️ Covered`.
-   - Grid layout rendering zone cards.
+4. **Home Page (`src/pages/index.astro`) — Meaningful & At-a-Glance User Experience**
+   The home landing page MUST be designed so any visitor instantly understands what SpotSync does at a glance:
+   - **Instant Value Proposition Hero Section**:
+     - High-impact title: *"SpotSync — Real-Time Smart Parking & EV Charging Hub"*
+     - Descriptive tagline: *"Instantly locate, check real-time availability, and reserve guaranteed parking spaces & EV chargers across the city."*
+     - Live status pill (*"🟢 Real-Time Sync Active"*) & quick action buttons (*"Browse Parking Spots"*, *"How It Works"*).
+   - **At-a-Glance Feature Highlights Banner**:
+     - ⚡ **EV Fast Charging**: Real-time availability tracking for electric vehicle stations.
+     - 🛡️ **Guaranteed Spot**: Instant lock & reservation with zero double-booking.
+     - ⏱️ **Live Capacity**: Dynamic visual progress bars showing exact spot availability.
+   - **Live System Stats Counter Bar**:
+     - Metric cards highlighting aggregate status (Total Zones Managed, Available EV Chargers, Total Available Spots).
+   - **Intuitive "How It Works" 3-Step Guide**:
+     - **Step 1: Locate Zone** — Search & filter by EV charging, general, or covered parking.
+     - **Step 2: Reserve Spot** — Enter vehicle plate number and lock your spot in seconds.
+     - **Step 3: Park & Charge** — Drive directly to your assigned spot with guaranteed space.
+   - **Interactive Zone Catalog & Filter Grid**:
+     - Search bar + Type Filter Tabs (`All Zones`, `⚡ EV Charging`, `🚗 General`, `🛡️ Covered`).
+     - Responsive grid rendering `ZoneCard.astro` items with dynamic capacity bars, hourly rate tags, and instant "Reserve Spot" modal triggers.
 
 ### 💻 Execution Commands
 ```bash

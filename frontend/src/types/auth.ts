@@ -47,3 +47,12 @@ export interface AuthResponse {
   token: string;
   user: User;
 }
+
+/**
+ * Patch payload accepted by `PATCH /auth/me`. Only the editable
+ * profile fields live here — email/role changes are intentionally
+ * out of scope for the self-service settings modal.
+ */
+export interface ProfileUpdatePayload {
+  name: string;
+}

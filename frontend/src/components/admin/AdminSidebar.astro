@@ -240,22 +240,6 @@ const pageTitle = title ?? activeItem.label;
       </div>
 
       <div class="admin-topbar__right flex items-center gap-3">
-        <span
-          class="admin-topbar__live inline-flex items-center gap-2 py-[0.35rem] px-3 rounded-full bg-[hsl(160_84%_39%/0.12)] border border-[hsl(160_84%_39%/0.3)] text-[hsl(160_84%_28%)] text-[0.7rem] font-bold uppercase tracking-[0.1em] dark:text-[hsl(160_84%_32%)]"
-          data-admin-live
-          aria-live="polite"
-        >
-          <span class="admin-topbar__live-dot w-[0.45rem] h-[0.45rem] rounded-full bg-[hsl(160_84%_50%)] animate-topbar-live-pulse" aria-hidden="true"></span>
-          <span data-admin-live-label>Live</span>
-        </span>
-
-        <div class="admin-topbar__user flex items-center gap-[0.625rem] py-[0.4rem] pr-[0.625rem] pl-[0.4rem] rounded-[0.625rem] bg-[hsl(var(--surface-2)/0.7)] border border-[hsl(var(--surface-3))] max-lg:p-1" data-admin-user>
-          <div class="admin-topbar__avatar w-8 h-8 rounded-full bg-[linear-gradient(135deg,hsl(160_84%_39%),hsl(217_91%_60%))] text-white inline-flex items-center justify-center font-bold text-[0.85rem]" data-admin-user-avatar aria-hidden="true">A</div>
-          <div class="admin-topbar__user-meta flex flex-col leading-[1.15] max-lg:hidden">
-            <span class="admin-topbar__user-name text-[0.8rem] font-semibold text-[hsl(var(--text-strong))]" data-admin-user-name>Administrator</span>
-            <span class="admin-topbar__user-email text-[0.7rem] text-[hsl(var(--text-muted))]" data-admin-user-email>admin@spotsync</span>
-          </div>
-        </div>
       </div>
     </header>
 

@@ -3,7 +3,8 @@
 //
 // Server-rendered shell with a fully reactive client-side script tag
 // at the bottom of this file that subscribes to:
-//   1. The auth store (`$user`) for user/role/logout controls.
+//   1. The auth store (`$user`) via the React <UserMenu /> island for
+//      user/role/logout/profile controls.
 //   2. The theme store (`$theme`) for the sun/moon toggle button.
 //
 // Theme strategy:
@@ -12,6 +13,8 @@
 //   - `applyTheme()` runs synchronously on every change so the
 //     `.dark` class flips on <html> instantly (no refresh required).
 //   - Persistence is handled by `themeStore` (localStorage).
+
+import UserMenu from "./nav/UserMenu.tsx";
 
 interface Props {
   /** Optional current pathname for marking the active link. */
@@ -86,7 +89,9 @@ const { pathname = Astro.url.pathname } = Astro.props;
       </a>
     </div>
 
-    <!-- Right-side controls: theme toggle + auth (re-rendered by client script) -->
+    <!-- Right-side controls: theme toggle + React UserMenu island.
+         The island is `client:only="react"` because it reads from the
+         persistent auth store, which only exists in the browser. -->
     <div class="flex items-center gap-2">
       <!-- Theme toggle button. The visible icon is swapped by the script
            based on the current $theme value. -->
@@ -138,42 +143,52 @@ const { pathname = Astro.url.pathname } = Astro.props;
         <span class="sr-only" data-theme-label>Theme</span>
       </button>
 
-      <div class="flex items-center gap-2" data-auth-container>
-        <!-- Default SSR placeholder — overwritten by the client script on hydration. -->
-        <a
-          href="/login"
-          class="btn-ghost-glass text-sm"
-          data-auth-default
+      <!--
+        UserMenu island. Renders a circular avatar with a dropdown
+        menu (name, email, role, settings, logout).
+        We use `client:only` and provide a static SSR placeholder
+        below so the navbar never has an empty gap before React
+        mounts. The React component replaces this placeholder on
+        hydration.
+      -->
+      <UserMenu client:only="react">
+        <div
+          slot="fallback"
+          data-user-menu-fallback
+          class="flex items-center gap-2"
         >
-          Sign In
-        </a>
-        <a
-          href="/register"
-          class="btn-neon text-sm"
-          data-auth-default
-        >
-          Register
-        </a>
-      </div>
+          <a
+            href="/login"
+            class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white/70 px-4 text-sm font-medium text-slate-700 backdrop-blur-md transition-all hover:border-slate-400 hover:bg-white hover:text-slate-900 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800/60 dark:hover:text-slate-50"
+          >
+            Sign In
+          </a>
+          <a
+            href="/register"
+            class="inline-flex h-9 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all hover:from-emerald-400 hover:to-emerald-500 hover:shadow-emerald-500/50"
+          >
+            Register
+          </a>
+        </div>
+      </UserMenu>
     </div>
   </nav>
 </header>
 
 <script>
-  // Client-side hydration for the navbar.
+  // Client-side hydration for the navbar (theme + nav-link visibility).
   //
-  // We import the auth and theme stores at runtime so this script only
-  // runs in the browser. Both stores are persistent, so a refresh already
-  // has the user/theme available; we just need to render the right state.
+  // Auth state is owned by the <UserMenu /> React island, which
+  // subscribes directly to the Nano Store. This script only has to
+  // keep the theme toggle and the role-aware nav links in sync.
 
-  import { $isAdmin, $isAuthenticated, $user, clearSession } from "../store/authStore";
+  import { $isAdmin, $isAuthenticated } from "../store/authStore";
   import {
     $theme,
     applyTheme,
     toggleTheme,
     type Theme,
   } from "../store/themeStore";
-  import type { User } from "../types/auth";
 
   // ============================================================================
   // Theme toggle
@@ -208,114 +223,21 @@ const { pathname = Astro.url.pathname } = Astro.props;
   }
 
   // ============================================================================
-  // Auth controls
+  // Role-aware nav links
   // ============================================================================
 
-  function renderAuthControls(user: User | null): string {
-    if (!user) {
-      return `
-        <a href="/login" class="btn-ghost-glass text-sm">Sign In</a>
-        <a href="/register" class="btn-neon text-sm">Register</a>
-      `;
-    }
-
-    const initials = (user.name || user.email)
-      .split(/\s+/)
-      .map((part) => part.charAt(0).toUpperCase())
-      .slice(0, 2)
-      .join("");
-
-    const isAdminUser = user.role === "admin";
-    const roleBadgeClass = isAdminUser
-      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
-      : "bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30";
-    const roleBadgeLabel = isAdminUser ? "Admin" : "Driver";
-
-    const safeName = escapeHtml(user.name);
-    const safeEmail = escapeHtml(user.email);
-
-    return `
-      <div class="flex items-center gap-3">
-        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-200/60 dark:bg-slate-800/40 border border-slate-300/60 dark:border-slate-700/50">
-          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
-            ${escapeHtml(initials)}
-          </div>
-          <div class="flex flex-col leading-tight">
-            <span class="text-sm font-semibold text-slate-900 dark:text-slate-100">${safeName}</span>
-            <span class="text-xs text-slate-500 dark:text-slate-400">${safeEmail}</span>
-          </div>
-        </div>
-        <span class="hidden md:inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${roleBadgeClass}">
-          ${roleBadgeLabel}
-        </span>
-        <button
-          type="button"
-          data-action="logout"
-          class="btn-ghost-glass text-sm hover:!bg-red-500/15 hover:!border-red-500/40 hover:!text-red-600 dark:hover:!text-red-300"
-          aria-label="Sign out"
-        >
-          Logout
-        </button>
-      </div>
-    `;
-  }
-
-  function escapeHtml(input: string): string {
-    return input
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
-
-  function syncAdminLinkVisibility(admin: boolean): void {
+  /**
+   * Show / hide nav links based on the current auth + admin state.
+   * The "My Reservations" link is for any signed-in user; the
+   * "Admin Dashboard" link is admin-only.
+   */
+  function syncNavLinkVisibility(): void {
     const adminLink = document.querySelector<HTMLAnchorElement>(
       '[data-nav-link="admin"]',
     );
-    if (!adminLink) return;
-    adminLink.classList.toggle("hidden", !admin);
-  }
-
-  function bindLogoutDelegation(): void {
-    const container = document.querySelector<HTMLDivElement>(
-      "[data-auth-container]",
-    );
-    if (!container) return;
-
-    container.addEventListener("click", (event) => {
-      const target = event.target as HTMLElement | null;
-      if (!target) return;
-      const button = target.closest<HTMLButtonElement>(
-        '[data-action="logout"]',
-      );
-      if (!button) return;
-      event.preventDefault();
-      handleLogout();
-    });
-  }
-
-  function handleLogout(): void {
-    clearSession();
-    const w = window as unknown as {
-      showToast?: (message: string, type?: string) => void;
-    };
-    if (typeof w.showToast === "function") {
-      w.showToast("You have been signed out.", "info");
+    if (adminLink) {
+      adminLink.classList.toggle("hidden", !$isAdmin.get());
     }
-    window.location.href = "/login";
-  }
-
-  function paintAuth(): void {
-    const container = document.querySelector<HTMLDivElement>(
-      "[data-auth-container]",
-    );
-    if (!container) return;
-
-    const user = $user.get();
-    container.innerHTML = renderAuthControls(user);
-    syncAdminLinkVisibility($isAdmin.get());
-
     const myResLink = document.querySelector<HTMLAnchorElement>(
       '[data-nav-link="my-reservations"]',
     );
@@ -332,11 +254,13 @@ const { pathname = Astro.url.pathname } = Astro.props;
   // from the pre-paint script in Layout.astro, so we just sync the icon.
   paintThemeIcons($theme.get());
   bindThemeToggle();
+
   // Re-paint when the theme changes (also reflects changes from other tabs).
   $theme.listen((next) => {
     applyTheme(next);
     paintThemeIcons(next);
   });
+
   // React to cross-tab theme changes via the storage event.
   window.addEventListener("storage", (event) => {
     if (event.key === "spotsync_theme") {
@@ -345,13 +269,9 @@ const { pathname = Astro.url.pathname } = Astro.props;
     }
   });
 
-  paintAuth();
-  bindLogoutDelegation();
-
-  $user.listen(() => {
-    paintAuth();
-  });
-
-  void $isAuthenticated;
-  void $isAdmin;
+  // Auth state lives in the UserMenu React island, but the nav link
+  // visibility is still a navbar concern, so we subscribe here too.
+  syncNavLinkVisibility();
+  $isAuthenticated.listen(() => syncNavLinkVisibility());
+  $isAdmin.listen(() => syncNavLinkVisibility());
 </script>

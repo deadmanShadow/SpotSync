@@ -27,7 +27,7 @@ import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
     </div>
 
     <div class="flex flex-col gap-3">
-      <div class="inline-flex items-center gap-2 text-[0.78rem] font-semibold uppercase tracking-[0.06em] text-slate-300">
+      <div class="inline-flex items-center gap-2 text-[0.78rem] font-semibold uppercase tracking-[0.06em] text-slate-700 dark:text-slate-300">
         <span class="inline-flex h-[1.4rem] w-[1.4rem] items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-[0.7rem] font-bold text-white shadow-[0_4px_12px_-3px_rgba(16,185,129,0.4)]">
           2
         </span>
@@ -70,7 +70,7 @@ import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
           minlength={6}
           icon="lock"
         >
-          <p slot="hint" class="inline-flex items-center gap-1.5 text-xs text-slate-500 m-0">
+          <p slot="hint" class="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-500 m-0">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0">
               <circle cx="12" cy="12" r="10"></circle>
               <line x1="12" y1="16" x2="12" y2="12"></line>
@@ -84,24 +84,24 @@ import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
           <input type="checkbox" id="accept-terms" name="accept_terms" required class="peer absolute h-0 w-0 opacity-0" />
           <span
             aria-hidden="true"
-            class="auth-checkbox-box inline-flex h-[1.05rem] w-[1.05rem] shrink-0 items-center justify-center rounded-[0.3rem] border-[1.5px] border-slate-700/80 bg-slate-900/60 text-transparent transition-all duration-150 peer-checked:border-transparent peer-checked:bg-gradient-to-br peer-checked:from-emerald-500 peer-checked:to-emerald-600 peer-checked:text-white peer-checked:shadow-[0_0_0_3px_rgba(16,185,129,0.18)] [&_svg]:h-3 [&_svg]:w-3"
+            class="auth-checkbox-box inline-flex h-[1.05rem] w-[1.05rem] shrink-0 items-center justify-center rounded-[0.3rem] border-[1.5px] border-slate-300 bg-white text-transparent transition-all duration-150 peer-checked:border-transparent peer-checked:bg-gradient-to-br peer-checked:from-emerald-500 peer-checked:to-emerald-600 peer-checked:text-white peer-checked:shadow-[0_0_0_3px_rgba(16,185,129,0.18)] dark:border-slate-700/80 dark:bg-slate-900/60 [&_svg]:h-3 [&_svg]:w-3"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
           </span>
-          <span class="auth-checkbox-label text-[0.8rem] text-slate-400">
+          <span class="auth-checkbox-label text-[0.8rem] text-slate-600 dark:text-slate-400">
             I agree to the
-            <a href="#" class="auth-link-inline font-medium text-blue-300 no-underline transition-colors duration-150 hover:text-blue-200 hover:underline hover:underline-offset-[3px]">Terms of Service</a>
+            <a href="#" class="auth-link-inline font-medium text-blue-600 no-underline transition-colors duration-150 hover:text-blue-500 hover:underline hover:underline-offset-[3px] dark:text-blue-300 dark:hover:text-blue-200">Terms of Service</a>
             and
-            <a href="#" class="auth-link-inline font-medium text-blue-300 no-underline transition-colors duration-150 hover:text-blue-200 hover:underline hover:underline-offset-[3px]">Privacy Policy</a>
+            <a href="#" class="auth-link-inline font-medium text-blue-600 no-underline transition-colors duration-150 hover:text-blue-500 hover:underline hover:underline-offset-[3px] dark:text-blue-300 dark:hover:text-blue-200">Privacy Policy</a>
           </span>
         </label>
 
         <div
           id="register-error"
           role="alert"
-          class="hidden flex items-center gap-2.5 rounded-[0.625rem] border border-red-500/35 bg-red-500/10 px-[0.85rem] py-[0.7rem] text-[0.85rem] text-red-300"
+          class="hidden flex items-center gap-2.5 rounded-[0.625rem] border border-red-500/35 bg-red-500/10 px-[0.85rem] py-[0.7rem] text-[0.85rem] text-red-700 dark:text-red-300"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-[1.1rem] w-[1.1rem] shrink-0">
             <circle cx="12" cy="12" r="10"></circle>
@@ -120,9 +120,9 @@ import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
       </form>
     </div>
 
-    <p class="text-center text-[0.85rem] text-slate-400 mt-2 mb-0">
+    <p class="text-center text-[0.85rem] text-slate-600 dark:text-slate-400 mt-2 mb-0">
       Already have an account?
-      <a href="/login" class="font-semibold text-emerald-400 no-underline transition-colors duration-150 hover:text-emerald-300 hover:underline hover:underline-offset-[3px]">Sign in instead</a>
+      <a href="/login" class="font-semibold text-emerald-600 no-underline transition-colors duration-150 hover:text-emerald-500 hover:underline hover:underline-offset-[3px] dark:text-emerald-400 dark:hover:text-emerald-300">Sign in instead</a>
     </p>
   </AuthShell>
 </Layout>
@@ -145,17 +145,36 @@ import type { UserRole } from "../types/auth";
   const submitLabel = submitButton.querySelector("[data-label]") as HTMLElement;
 
   /* ---------- Password visibility toggle ------------------------------ */
+  // Walk up to the wrapping div (added in AuthFormField via
+  // `.auth-input-wrap` / `[data-field-wrap]`) so the toggle always
+  // finds the correct sibling input — even when a future refactor
+  // moves the button outside of an `.auth-input-wrap` ancestor.
   document.querySelectorAll<HTMLButtonElement>("[data-toggle-password]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const wrap = btn.closest(".auth-input-wrap");
-      const input = wrap?.querySelector("input") as HTMLInputElement | null;
+    btn.addEventListener("click", (event) => {
+      event.preventDefault();
+      const wrap =
+        btn.closest<HTMLElement>("[data-field-wrap]") ??
+        btn.closest<HTMLElement>(".auth-input-wrap");
+      const input = wrap?.querySelector<HTMLInputElement>(
+        'input[type="password"], input[type="text"]',
+      );
       if (!input) return;
+
       const isHidden = input.type === "password";
       input.type = isHidden ? "text" : "password";
-      const eyeOn = btn.querySelector("[data-eye-on]") as HTMLElement | null;
-      const eyeOff = btn.querySelector("[data-eye-off]") as HTMLElement | null;
-      eyeOn?.classList.toggle("hidden", isHidden);
-      eyeOff?.classList.toggle("hidden", !isHidden);
+
+      const eyeOn = btn.querySelector<HTMLElement>("[data-eye-on]");
+      const eyeOff = btn.querySelector<HTMLElement>("[data-eye-off]");
+      // When password is now visible (text), show the "off" (crossed) icon.
+      // When password is now hidden (password), show the "on" (open) icon.
+      eyeOn?.classList.toggle("hidden", !isHidden);
+      eyeOff?.classList.toggle("hidden", isHidden);
+
+      btn.setAttribute(
+        "aria-label",
+        isHidden ? "Hide password" : "Show password",
+      );
+      btn.setAttribute("aria-pressed", String(isHidden));
     });
   });
 

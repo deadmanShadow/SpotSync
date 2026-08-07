@@ -115,6 +115,17 @@ export function setSession(token: string, user: User): void {
 }
 
 /**
+ * Replace the persisted user record in-place without touching the
+ * JWT. Used by the profile settings modal after a successful
+ * `PATCH /auth/me` — keeps the token valid, refreshes the cached
+ * user (new name, new updated_at, etc.), and triggers every
+ * subscriber of `$user` so the navbar avatar re-renders.
+ */
+export function updateUser(user: User): void {
+  $user.set(user);
+}
+
+/**
  * Wipe every trace of the current session from memory and storage.
  * Called on logout and on 401 responses from the API.
  */

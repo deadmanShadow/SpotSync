@@ -294,6 +294,11 @@
     animation: fade-in-up 0.35s ease-out both;
   }
 
+  /* Capacity bar indicator — used by the shadcn Progress component. */
+  .capacity-bar-green {
+    background: linear-gradient(90deg, hsl(160 84% 39%), hsl(160 84% 50%));
+  }
+
   /* Skeleton shimmer — used by loading placeholders. */
   @keyframes shimmer {
     0% {

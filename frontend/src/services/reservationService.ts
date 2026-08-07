@@ -70,12 +70,26 @@ export async function getAllReservations(): Promise<Reservation[]> {
 /**
  * Cancel a reservation by its numeric ID.
  *
- * Frees the spot back to the zone on the backend (so the zone's
- * `available_spots` counter increments). The reservation row is
- * flipped to `status: "cancelled"` rather than deleted.
+ * Flips the row to `status: "cancelled"` (soft cancel) so the booking
+ * remains in the audit trail. The backend accepts a status update via
+ * PATCH and validates the transition from "active".
  */
 export async function cancelReservation(id: number): Promise<Reservation> {
-  return apiFetch<Reservation>(`/reservations/${id}`, {
+  return apiFetch<Reservation>(`/reservations/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "cancelled" }),
+  });
+}
+
+/**
+ * Admin-only: hard-delete a reservation row by its numeric ID.
+ *
+ * Unlike `cancelReservation`, this removes the row entirely from the
+ * database. Used by the admin dashboard's reservations table for the
+ * "Delete" action in the destructive confirm dialog.
+ */
+export async function deleteReservation(id: number): Promise<void> {
+  await apiFetch<void>(`/reservations/${id}`, {
     method: "DELETE",
   });
 }

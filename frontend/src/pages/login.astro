@@ -225,14 +225,12 @@ import { setSession } from "../store/authStore";
         w.showToast(`Welcome back, ${response.user.name}!`, "success");
       }
 
-      // The /admin route is not built yet, so always land on "/" for now
-      // and surface an info toast when an admin signs in. Once the admin
-      // dashboard exists, this can become response.user.role === "admin" ? "/admin" : "/".
+      // Send admins to the admin console and drivers to the home page.
       const isAdmin = response.user.role === "admin";
       if (isAdmin && typeof w.showToast === "function") {
-        w.showToast("Signed in as admin — admin dashboard coming soon.", "info");
+        w.showToast(`Signed in as admin. Welcome to the SpotSync console.`, "success");
       }
-      window.location.href = "/";
+      window.location.href = isAdmin ? "/admin" : "/";
     } catch (err) {
       setLoading(false);
       showError(friendlyError(err));

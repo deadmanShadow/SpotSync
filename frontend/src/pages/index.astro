@@ -487,11 +487,11 @@ const PRICE_FMT = (n: number) => `$${n.toFixed(2)}/hr`;
 
   // Global toast helper exposed by Layout.astro's <script>.
   type ToastType = "success" | "error" | "info";
-  type W = Window & { showToast?: (msg: string, type?: ToastType) => void };
-  function toast(msg: string, type: ToastType = "info"): void {
+  type W = Window & { showToast?: (msg: string, type?: ToastType, duration?: number) => void };
+  function toast(msg: string, type: ToastType = "info", duration?: number): void {
     const w = window as unknown as W;
     if (typeof w.showToast === "function") {
-      w.showToast(msg, type);
+      w.showToast(msg, type, duration);
     } else {
       // Fallback if toast container isn't available yet.
       console.log(`[toast:${type}] ${msg}`);

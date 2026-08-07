@@ -1,0 +1,27 @@
+---
+/**
+ * Admin > Reservations (/admin/reservations)
+ *
+ * Thin shell — the live React island handles the table, filters,
+ * pagination, cancel and delete actions.
+ */
+
+import Layout from "@/layouts/Layout.astro";
+import AdminSidebar from "@/components/admin/AdminSidebar.astro";
+import AdminGuard from "@/components/admin/AdminGuard.astro";
+import { ReservationsTable } from "@/components/admin/ReservationsTable";
+---
+
+<Layout
+  title="Reservations — SpotSync Admin"
+  description="Every driver reservation across the SpotSync network."
+>
+  <AdminGuard>
+    <AdminSidebar
+      title="Reservations"
+      subtitle="Every driver booking across the network — search, cancel, or delete."
+    >
+      <ReservationsTable client:only="react" />
+    </AdminSidebar>
+  </AdminGuard>
+</Layout>

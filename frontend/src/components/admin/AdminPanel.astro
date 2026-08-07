@@ -1,0 +1,112 @@
+---
+/**
+ * Admin Panel container.
+ *
+ * A consistent surface used everywhere a row of cards / tables / lists
+ * needs a clear visual container. Replaces the older glass-card utility
+ * with proper layering, padding, and typography hierarchy.
+ */
+
+interface Props {
+  /** Title rendered in the header row. */
+  title?: string;
+  /** Optional subtitle below the title. */
+  subtitle?: string;
+  /** Optional small text rendered on the right side of the header row. */
+  meta?: string;
+  /** When true, removes the inner padding so tables can go edge-to-edge. */
+  flush?: boolean;
+  /** Optional data attribute hook for client scripts. */
+  dataKey?: string;
+}
+
+const { title, subtitle, meta, flush = false, dataKey } = Astro.props as Props;
+---
+
+<section class="admin-panel" data-panel-key={dataKey}>
+  {(title || subtitle || meta) && (
+    <header class="admin-panel__header">
+      <div class="admin-panel__heading">
+        {title && <h2 class="admin-panel__title">{title}</h2>}
+        {subtitle && <p class="admin-panel__subtitle">{subtitle}</p>}
+      </div>
+      {meta && <span class="admin-panel__meta">{meta}</span>}
+      <div class="admin-panel__actions">
+        <slot name="actions" />
+      </div>
+    </header>
+  )}
+  <div class:list={["admin-panel__body", flush && "admin-panel__body--flush"]}>
+    <slot />
+  </div>
+  <div class="admin-panel__footer">
+    <slot name="footer" />
+  </div>
+</section>
+
+<style>
+  .admin-panel {
+    background-color: hsl(var(--surface-1));
+    border: 1px solid hsl(var(--surface-3));
+    border-radius: 0.875rem;
+    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.04);
+    overflow: hidden;
+  }
+
+  .admin-panel__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.1rem 1.25rem;
+    border-bottom: 1px solid hsl(var(--surface-3));
+  }
+  .admin-panel__heading {
+    min-width: 0;
+  }
+  .admin-panel__title {
+    font-family: "Outfit", "Inter", sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    line-height: 1.3;
+    color: hsl(var(--text-strong));
+    margin: 0;
+  }
+  .admin-panel__subtitle {
+    margin-top: 0.2rem;
+    font-size: 0.825rem;
+    color: hsl(var(--text-muted));
+  }
+  .admin-panel__meta {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: hsl(var(--text-muted));
+    white-space: nowrap;
+  }
+  .admin-panel__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .admin-panel__body {
+    padding: 1.1rem 1.25rem;
+  }
+  .admin-panel__body--flush {
+    padding: 0;
+  }
+
+  .admin-panel__footer {
+    padding: 0.85rem 1.25rem;
+    border-top: 1px solid hsl(var(--surface-3));
+    background-color: hsl(var(--surface-2) / 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+    color: hsl(var(--text-muted));
+  }
+</style>

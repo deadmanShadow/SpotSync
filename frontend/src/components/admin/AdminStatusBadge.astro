@@ -1,0 +1,138 @@
+---
+/**
+ * Admin status badge.
+ *
+ * Renders a small colored pill used in tables and cards. Works for
+ * reservation statuses (active / completed / cancelled) and user roles
+ * (driver / admin).
+ */
+
+type Status =
+  | "active"
+  | "completed"
+  | "cancelled"
+  | "driver"
+  | "admin";
+
+interface Props {
+  status: Status;
+  /** Optional override for the displayed label. */
+  label?: string;
+}
+
+const { status, label } = Astro.props as Props;
+
+const STATUS_MAP: Record<Status, { label: string; classes: string; dot: string }> = {
+  active: {
+    label: "Active",
+    classes: "admin-badge--emerald",
+    dot: "admin-badge__dot--emerald",
+  },
+  completed: {
+    label: "Completed",
+    classes: "admin-badge--blue",
+    dot: "admin-badge__dot--blue",
+  },
+  cancelled: {
+    label: "Cancelled",
+    classes: "admin-badge--slate",
+    dot: "admin-badge__dot--slate",
+  },
+  driver: {
+    label: "Driver",
+    classes: "admin-badge--blue",
+    dot: "admin-badge__dot--blue",
+  },
+  admin: {
+    label: "Admin",
+    classes: "admin-badge--emerald",
+    dot: "admin-badge__dot--emerald",
+  },
+};
+
+const badge = STATUS_MAP[status] ?? STATUS_MAP.cancelled;
+const text = label ?? badge.label;
+---
+
+<span class:list={["admin-badge", badge.classes]}>
+  <span class:list={["admin-badge__dot", badge.dot]} aria-hidden="true"></span>
+  <span class="admin-badge__label">{text}</span>
+</span>
+
+<style>
+  .admin-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.4;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .admin-badge__dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 9999px;
+    flex-shrink: 0;
+  }
+
+  .admin-badge--emerald {
+    color: hsl(160 84% 28%);
+    background-color: hsl(160 84% 92%);
+    border-color: hsl(160 84% 80%);
+  }
+  :root:not(.dark) .admin-badge--emerald {
+    color: hsl(160 84% 25%);
+    background-color: hsl(160 84% 95%);
+    border-color: hsl(160 84% 85%);
+  }
+  .dark .admin-badge--emerald {
+    color: hsl(160 84% 70%);
+    background-color: hsl(160 84% 39% / 0.15);
+    border-color: hsl(160 84% 39% / 0.35);
+  }
+  .admin-badge__dot--emerald {
+    background-color: hsl(160 84% 39%);
+  }
+
+  .admin-badge--blue {
+    color: hsl(217 91% 38%);
+    background-color: hsl(217 91% 95%);
+    border-color: hsl(217 91% 85%);
+  }
+  :root:not(.dark) .admin-badge--blue {
+    color: hsl(217 91% 35%);
+    background-color: hsl(217 91% 96%);
+    border-color: hsl(217 91% 85%);
+  }
+  .dark .admin-badge--blue {
+    color: hsl(217 91% 75%);
+    background-color: hsl(217 91% 60% / 0.15);
+    border-color: hsl(217 91% 60% / 0.35);
+  }
+  .admin-badge__dot--blue {
+    background-color: hsl(217 91% 60%);
+  }
+
+  .admin-badge--slate {
+    color: hsl(215 25% 30%);
+    background-color: hsl(215 16% 94%);
+    border-color: hsl(215 16% 85%);
+  }
+  :root:not(.dark) .admin-badge--slate {
+    color: hsl(215 25% 27%);
+    background-color: hsl(215 16% 95%);
+    border-color: hsl(215 16% 85%);
+  }
+  .dark .admin-badge--slate {
+    color: hsl(215 20% 75%);
+    background-color: hsl(215 20% 25% / 0.4);
+    border-color: hsl(215 20% 30%);
+  }
+  .admin-badge__dot--slate {
+    background-color: hsl(215 16% 55%);
+  }
+</style>

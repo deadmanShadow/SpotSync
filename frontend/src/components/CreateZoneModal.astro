@@ -135,6 +135,17 @@
     if (target.closest("[data-close-create-zone]")) closeDialog();
   });
 
+  // Allow React islands (e.g. the Zones grid) to open the modal via a
+  // window-level custom event without coupling them to this Astro component.
+  window.addEventListener("spotsync:open-create-zone", () => {
+    hideError();
+    dialog?.showModal();
+    window.setTimeout(
+      () => document.querySelector<HTMLInputElement>("#create-zone-name")?.focus(),
+      50,
+    );
+  });
+
   dialog?.addEventListener("click", (event) => {
     if (event.target === dialog) closeDialog();
   });

@@ -69,3 +69,28 @@ export async function createZone(
     body: JSON.stringify(payload),
   });
 }
+
+/**
+ * Admin-only: delete a parking zone by ID. Used by the admin dashboard
+ * to permanently remove a zone from the catalog. The backend returns 404
+ * if the zone does not exist (translated to ApiError by api.ts).
+ */
+export async function deleteZone(id: number): Promise<void> {
+  await apiFetch<void>(`/zones/${id}`, {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Admin-only: update an existing parking zone. The backend enforces the
+ * admin role and returns the refreshed zone record.
+ */
+export async function updateZone(
+  id: number,
+  payload: CreateZonePayload,
+): Promise<ParkingZone> {
+  return apiFetch<ParkingZone>(`/zones/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}

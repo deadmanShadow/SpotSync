@@ -160,6 +160,14 @@ func build() {
 			log.Printf("Zone seeder inserted %d new zones", inserted)
 		}
 
+		// Seed the default demo user accounts (admin + drivers) so the
+		// published credentials on the login page work out of the box.
+		if inserted, err := seeder.SeedUsersIfNeeded(db); err != nil {
+			log.Printf("WARNING: User seeder failed: %v", err)
+		} else if inserted > 0 {
+			log.Printf("User seeder inserted %d demo accounts", inserted)
+		}
+
 		// Boot the 1-hour rotation worker. The rotator is cancelled via
 		// the server shutdown context so its goroutine exits cleanly.
 		rotator := seeder.NewZoneRotator(db, 0) // 0 -> use default (1 hour)
@@ -179,6 +187,13 @@ func build() {
 
 	// --- Authenticated routes ---
 	auth := middleware.AuthMiddleware(cfg.JWTSecret)
+
+	// Admin-only auth routes (user roster). Mounted under the same /auth
+	// group but guarded by JWT + admin role.
+	adminAuthGroup := e.Group("/api/v1/auth", auth, middleware.AdminOnly())
+	adminAuthGroup.GET("/users", authHandler.ListUsers)
+	adminAuthGroup.GET("/users/count", authHandler.CountUsersByRole)
+	adminAuthGroup.DELETE("/users/:id", authHandler.DeleteUser)
 
 	// Zone mutations are admin-only.
 	zoneGroup := e.Group("/api/v1/zones", auth)

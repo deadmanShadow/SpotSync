@@ -1,0 +1,27 @@
+---
+/**
+ * Admin > Drivers (/admin/drivers)
+ *
+ * Thin shell — the live React island handles the driver list,
+ * detail panel, and delete actions.
+ */
+
+import Layout from "@/layouts/Layout.astro";
+import AdminSidebar from "@/components/admin/AdminSidebar.astro";
+import AdminGuard from "@/components/admin/AdminGuard.astro";
+import { DriversView } from "@/components/admin/DriversView";
+---
+
+<Layout
+  title="Drivers — SpotSync Admin"
+  description="Drivers who have made reservations and their booking history."
+>
+  <AdminGuard>
+    <AdminSidebar
+      title="Drivers"
+      subtitle="Drivers who have reserved spots and their booking history."
+    >
+      <DriversView client:only="react" />
+    </AdminSidebar>
+  </AdminGuard>
+</Layout>

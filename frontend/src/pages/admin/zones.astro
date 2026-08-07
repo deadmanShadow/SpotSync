@@ -1,0 +1,31 @@
+---
+/**
+ * Admin > Parking Zones (/admin/zones)
+ *
+ * Thin shell — the live React island handles the grid, capacity
+ * progress bars, and delete actions. The Create modal is kept as
+ * an existing Astro component; we open it via a custom event so the
+ * React island can stay decoupled from the modal's DOM.
+ */
+
+import Layout from "@/layouts/Layout.astro";
+import AdminSidebar from "@/components/admin/AdminSidebar.astro";
+import AdminGuard from "@/components/admin/AdminGuard.astro";
+import { ZonesGrid } from "@/components/admin/ZonesGrid";
+import CreateZoneModal from "@/components/CreateZoneModal.astro";
+---
+
+<Layout
+  title="Parking Zones — SpotSync Admin"
+  description="Create, audit, and monitor every parking zone in the network."
+>
+  <AdminGuard>
+    <AdminSidebar
+      title="Parking Zones"
+      subtitle="Create, audit, and monitor every parking zone in the network."
+    >
+      <ZonesGrid client:only="react" />
+    </AdminSidebar>
+  </AdminGuard>
+  <CreateZoneModal />
+</Layout>

@@ -1,0 +1,243 @@
+---
+/**
+ * Admin empty / loading / error state placeholder.
+ *
+ * Renders one of three states (empty, loading, error) inside a panel.
+ * Page scripts toggle the visibility via the `data-state` attribute.
+ */
+
+interface Props {
+  /** Which state to render. Hidden by default; page scripts toggle. */
+  state?: "loading" | "empty" | "error";
+  /** Title shown in the empty state. */
+  title?: string;
+  /** Description shown in the empty state. */
+  description?: string;
+  /** Optional data key for the lookup hook. */
+  dataKey?: string;
+  /** Optional CTA. */
+  ctaLabel?: string;
+  /** Optional CTA target selector (clicking fires the action). */
+  ctaAction?: string;
+  /** Optional icon. */
+  icon?: "inbox" | "alert" | "search";
+}
+
+const {
+  state = "loading",
+  title,
+  description,
+  dataKey,
+  ctaLabel,
+  ctaAction,
+  icon = "inbox",
+} = Astro.props as Props;
+---
+
+<div
+  class="admin-state"
+  data-admin-state={dataKey}
+  data-current-state={state}
+  hidden
+>
+  {state === "loading" && (
+    <div class="admin-state__loading">
+      <div class="admin-state__skeleton-row">
+        <div class="admin-state__skeleton-rect"></div>
+        <div class="admin-state__skeleton-row-text">
+          <div class="admin-state__skeleton-bar" style="width: 45%"></div>
+          <div class="admin-state__skeleton-bar admin-state__skeleton-bar--thin" style="width: 70%"></div>
+        </div>
+      </div>
+      <div class="admin-state__skeleton-row">
+        <div class="admin-state__skeleton-rect"></div>
+        <div class="admin-state__skeleton-row-text">
+          <div class="admin-state__skeleton-bar" style="width: 55%"></div>
+          <div class="admin-state__skeleton-bar admin-state__skeleton-bar--thin" style="width: 65%"></div>
+        </div>
+      </div>
+      <div class="admin-state__skeleton-row">
+        <div class="admin-state__skeleton-rect"></div>
+        <div class="admin-state__skeleton-row-text">
+          <div class="admin-state__skeleton-bar" style="width: 40%"></div>
+          <div class="admin-state__skeleton-bar admin-state__skeleton-bar--thin" style="width: 80%"></div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {state === "empty" && (
+    <div class="admin-state__content">
+      <span class="admin-state__icon admin-state__icon--muted" aria-hidden="true">
+        {icon === "inbox" && (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
+        )}
+        {icon === "alert" && (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        )}
+        {icon === "search" && (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        )}
+      </span>
+      <h3 class="admin-state__title">{title ?? "Nothing here yet"}</h3>
+      {description && <p class="admin-state__description">{description}</p>}
+      {ctaLabel && (
+        <button
+          type="button"
+          class="admin-state__cta"
+          data-action={ctaAction}
+        >
+          {ctaLabel}
+        </button>
+      )}
+    </div>
+  )}
+
+  {state === "error" && (
+    <div class="admin-state__content">
+      <span class="admin-state__icon admin-state__icon--error" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      </span>
+      <h3 class="admin-state__title">{title ?? "Something went wrong"}</h3>
+      {description && <p class="admin-state__description" data-error-message>{description}</p>}
+      {ctaLabel && (
+        <button
+          type="button"
+          class="admin-state__cta"
+          data-action={ctaAction}
+        >
+          {ctaLabel}
+        </button>
+      )}
+    </div>
+  )}
+</div>
+
+<style>
+  .admin-state {
+    width: 100%;
+  }
+  .admin-state__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 3rem 1.5rem;
+    text-align: center;
+  }
+  .admin-state__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 1rem;
+    background-color: hsl(var(--surface-2));
+    color: hsl(var(--text-muted));
+    margin-bottom: 0.5rem;
+  }
+  .admin-state__icon svg {
+    width: 1.85rem;
+    height: 1.85rem;
+  }
+  .admin-state__icon--muted {
+    background-color: hsl(var(--surface-2));
+  }
+  .admin-state__icon--error {
+    background-color: hsl(0 84% 95%);
+    color: hsl(0 84% 45%);
+  }
+  :root:not(.dark) .admin-state__icon--error {
+    background-color: hsl(0 84% 96%);
+    color: hsl(0 84% 38%);
+  }
+  .dark .admin-state__icon--error {
+    background-color: hsl(0 84% 60% / 0.12);
+    color: hsl(0 84% 70%);
+  }
+  .admin-state__title {
+    font-family: "Outfit", "Inter", sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: hsl(var(--text-strong));
+    margin: 0;
+  }
+  .admin-state__description {
+    color: hsl(var(--text-muted));
+    font-size: 0.9rem;
+    max-width: 32rem;
+    margin: 0;
+  }
+  .admin-state__cta {
+    margin-top: 1rem;
+    padding: 0.5rem 1.25rem;
+    border-radius: 0.625rem;
+    background-color: hsl(var(--surface-2));
+    border: 1px solid hsl(var(--surface-3));
+    color: hsl(var(--text-strong));
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 150ms ease;
+  }
+  .admin-state__cta:hover {
+    background-color: hsl(var(--surface-3));
+  }
+
+  /* Loading skeletons */
+  .admin-state__loading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+  }
+  .admin-state__skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 0.625rem;
+    background-color: hsl(var(--surface-2) / 0.5);
+  }
+  .admin-state__skeleton-rect {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+    background: linear-gradient(
+      90deg,
+      hsl(var(--surface-2)) 0%,
+      hsl(var(--surface-3)) 50%,
+      hsl(var(--surface-2)) 100%
+    );
+    background-size: 200% 100%;
+    animation: admin-state-shimmer 1.4s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  .admin-state__skeleton-row-text {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+  .admin-state__skeleton-bar {
+    height: 0.7rem;
+    border-radius: 0.3rem;
+    background: linear-gradient(
+      90deg,
+      hsl(var(--surface-2)) 0%,
+      hsl(var(--surface-3)) 50%,
+      hsl(var(--surface-2)) 100%
+    );
+    background-size: 200% 100%;
+    animation: admin-state-shimmer 1.4s ease-in-out infinite;
+  }
+  .admin-state__skeleton-bar--thin {
+    height: 0.5rem;
+    width: 60%;
+  }
+  @keyframes admin-state-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+</style>

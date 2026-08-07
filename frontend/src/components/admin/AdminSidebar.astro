@@ -1,0 +1,792 @@
+---
+/**
+ * Admin Dashboard layout.
+ *
+ * Wraps the admin pages with a left sidebar navigation plus a top bar
+ * (containing the page title, search affordance, and user menu). The
+ * sidebar is keyboard-accessible, collapses on small screens behind a
+ * hamburger toggle, and renders an active-state indicator on the
+ * current section.
+ *
+ * Inner shell layout:
+ *   .admin-shell__
+ *     <aside data-admin-sidebar>  - The fixed sidebar
+ *     <div data-admin-content>   - The main content scroll area
+ *
+ * The sidebar is sticky on >= lg screens and overlays the content on
+ * smaller screens. Both behaviors are handled by the data attribute
+ * hooks the client-side script reads.
+ */
+
+interface NavItem {
+  key: string;
+  label: string;
+  href: string;
+  icon: string;
+  match?: (pathname: string) => boolean;
+}
+
+const pathname = Astro.url.pathname;
+
+const navItems: NavItem[] = [
+  {
+    key: "overview",
+    label: "Overview",
+    href: "/admin",
+    icon: "overview",
+    match: (p) => p === "/admin",
+  },
+  {
+    key: "reservations",
+    label: "Reservations",
+    href: "/admin/reservations",
+    icon: "reservations",
+    match: (p) => p.startsWith("/admin/reservations"),
+  },
+  {
+    key: "drivers",
+    label: "Drivers",
+    href: "/admin/drivers",
+    icon: "drivers",
+    match: (p) => p.startsWith("/admin/drivers"),
+  },
+  {
+    key: "users",
+    label: "Users",
+    href: "/admin/users",
+    icon: "users",
+    match: (p) => p.startsWith("/admin/users"),
+  },
+  {
+    key: "zones",
+    label: "Parking Zones",
+    href: "/admin/zones",
+    icon: "zones",
+    match: (p) => p.startsWith("/admin/zones"),
+  },
+];
+
+// Find the active section so we can highlight the sidebar item and color
+// the top bar accent strip accordingly.
+const activeItem =
+  navItems.find((item) => (item.match ? item.match(pathname) : pathname === item.href)) ??
+  navItems[0];
+
+interface Props {
+  /** Optional explicit title override (defaults to the active nav label). */
+  title?: string;
+  /** Optional subtitle for the page header. */
+  subtitle?: string;
+  /** Optional header slot rendered to the right of the title. */
+  actions?: boolean;
+}
+
+const { title, subtitle } = Astro.props as Props;
+const pageTitle = title ?? activeItem.label;
+---
+
+<div class="admin-shell" data-admin-shell data-active-key={activeItem.key}>
+  <!-- ====================================================================
+       Sidebar
+       ==================================================================== -->
+  <aside
+    class="admin-sidebar"
+    data-admin-sidebar
+    aria-label="Admin navigation"
+    aria-hidden="false"
+  >
+    <div class="admin-sidebar__inner">
+      <!-- Brand block -->
+      <a href="/admin" class="admin-sidebar__brand" aria-label="SpotSync admin home">
+        <span class="admin-sidebar__brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="admin-sidebar__brand-icon">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        </span>
+        <span class="admin-sidebar__brand-text">
+          <span class="admin-sidebar__brand-name">SpotSync</span>
+          <span class="admin-sidebar__brand-suffix">Admin Console</span>
+        </span>
+      </a>
+
+      <!-- Nav items -->
+      <nav class="admin-sidebar__nav" aria-label="Sections">
+        <ul role="list" class="admin-sidebar__nav-list">
+          {navItems.map((item) => {
+            const isActive = item.match ? item.match(pathname) : pathname === item.href;
+            return (
+              <li class="admin-sidebar__nav-item">
+                <a
+                  href={item.href}
+                  class:list={[
+                    "admin-sidebar__nav-link",
+                    isActive && "admin-sidebar__nav-link--active",
+                  ]}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  <span class="admin-sidebar__nav-icon" aria-hidden="true">
+                    {item.icon === "overview" && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="9" rx="1.5"></rect>
+                        <rect x="14" y="3" width="7" height="5" rx="1.5"></rect>
+                        <rect x="14" y="12" width="7" height="9" rx="1.5"></rect>
+                        <rect x="3" y="16" width="7" height="5" rx="1.5"></rect>
+                      </svg>
+                    )}
+                    {item.icon === "reservations" && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                        <path d="M8 15h2"></path>
+                        <path d="M14 15h2"></path>
+                      </svg>
+                    )}
+                    {item.icon === "drivers" && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="8" r="4"></circle>
+                        <path d="M4 21a8 8 0 0 1 16 0"></path>
+                      </svg>
+                    )}
+                    {item.icon === "users" && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                      </svg>
+                    )}
+                    {item.icon === "zones" && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                        <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                        <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                        <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                      </svg>
+                    )}
+                  </span>
+                  <span class="admin-sidebar__nav-label">{item.label}</span>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      <!-- Footer block: theme + status -->
+      <div class="admin-sidebar__footer">
+        <button
+          type="button"
+          class="admin-sidebar__theme-toggle"
+          data-action="theme-toggle"
+          aria-label="Toggle dark / light theme"
+          title="Toggle theme"
+        >
+          <span class="admin-sidebar__theme-icon" data-theme-icon="sun" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v2"></path>
+              <path d="M12 20v2"></path>
+              <path d="m4.93 4.93 1.41 1.41"></path>
+              <path d="m17.66 17.66 1.41 1.41"></path>
+              <path d="M2 12h2"></path>
+              <path d="M20 12h2"></path>
+              <path d="m4.93 19.07 1.41-1.41"></path>
+              <path d="m17.66 6.34 1.41-1.41"></path>
+            </svg>
+          </span>
+          <span class="admin-sidebar__theme-icon" data-theme-icon="moon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+            </svg>
+          </span>
+          <span class="admin-sidebar__theme-label" data-theme-label>Theme</span>
+        </button>
+
+        <div class="admin-sidebar__status" aria-hidden="true">
+          <span class="admin-sidebar__status-dot"></span>
+          <span class="admin-sidebar__status-label">System online</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ====================================================================
+       Backdrop (mobile only) - dims + blocks taps behind the sidebar.
+       ==================================================================== -->
+  <div class="admin-sidebar-backdrop" data-admin-sidebar-backdrop aria-hidden="true"></div>
+
+  <!-- ====================================================================
+       Main content area
+       ==================================================================== -->
+  <div class="admin-main" data-admin-main>
+    <header class="admin-topbar">
+      <div class="admin-topbar__left">
+        <button
+          type="button"
+          class="admin-topbar__menu"
+          data-action="toggle-sidebar"
+          aria-label="Toggle sidebar"
+          aria-controls="data-admin-sidebar"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+
+        <div class="admin-topbar__titles">
+          <p class="admin-topbar__eyebrow">SpotSync</p>
+          <h1 class="admin-topbar__title">{pageTitle}</h1>
+          {subtitle && <p class="admin-topbar__subtitle">{subtitle}</p>}
+        </div>
+      </div>
+
+      <div class="admin-topbar__right">
+        <span
+          class="admin-topbar__live"
+          data-admin-live
+          aria-live="polite"
+        >
+          <span class="admin-topbar__live-dot" aria-hidden="true"></span>
+          <span data-admin-live-label>Live</span>
+        </span>
+
+        <div class="admin-topbar__user" data-admin-user>
+          <div class="admin-topbar__avatar" data-admin-user-avatar aria-hidden="true">A</div>
+          <div class="admin-topbar__user-meta">
+            <span class="admin-topbar__user-name" data-admin-user-name>Administrator</span>
+            <span class="admin-topbar__user-email" data-admin-user-email>admin@spotsync</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="admin-content">
+      <slot />
+    </main>
+  </div>
+</div>
+
+<style>
+  /* ==========================================================================
+     Admin layout shell
+     ============================================================================ */
+  .admin-shell {
+    @apply min-h-screen w-full;
+  }
+
+  /* ----- Sidebar --------------------------------------------------------- */
+  .admin-sidebar {
+    --sb-bg: hsl(222.2 47% 9% / 0.92);
+    --sb-border: hsl(217.2 32.6% 17.5% / 0.8);
+    --sb-text: hsl(210 40% 93%);
+    --sb-text-muted: hsl(215 20% 65%);
+    --sb-text-active: hsl(160 84% 70%);
+    --sb-active-bg: hsl(160 84% 39% / 0.12);
+    --sb-active-border: hsl(160 84% 39% / 0.4);
+
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 40;
+    width: 16rem;
+    height: 100vh;
+    background-color: var(--sb-bg);
+    backdrop-filter: blur(14px);
+    border-right: 1px solid var(--sb-border);
+    color: var(--sb-text);
+    transition: transform 250ms ease, width 250ms ease;
+  }
+
+  :root:not(.dark) .admin-sidebar {
+    --sb-bg: hsl(0 0% 100% / 0.92);
+    --sb-border: hsl(214 32% 88%);
+    --sb-text: hsl(222.2 47% 11%);
+    --sb-text-muted: hsl(215 16% 47%);
+    --sb-text-active: hsl(160 84% 30%);
+    --sb-active-bg: hsl(160 84% 92%);
+    --sb-active-border: hsl(160 84% 60%);
+  }
+
+  .admin-sidebar__inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 1.25rem 1rem;
+  }
+
+  /* Brand */
+  .admin-sidebar__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.75rem;
+    color: var(--sb-text);
+    transition: background-color 200ms ease;
+  }
+  .admin-sidebar__brand:hover {
+    background-color: hsl(0 0% 100% / 0.04);
+  }
+  :root:not(.dark) .admin-sidebar__brand:hover {
+    background-color: hsl(214 32% 92%);
+  }
+
+  .admin-sidebar__brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.625rem;
+    background: linear-gradient(135deg, hsl(160 84% 39%), hsl(160 84% 32%));
+    color: hsl(0 0% 100%);
+    box-shadow: 0 4px 12px hsl(160 84% 39% / 0.35);
+  }
+  .admin-sidebar__brand-icon {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+  .admin-sidebar__brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+  }
+  .admin-sidebar__brand-name {
+    font-family: "Outfit", "Inter", sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+  }
+  .admin-sidebar__brand-suffix {
+    font-size: 0.7rem;
+    color: var(--sb-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    margin-top: 0.15rem;
+  }
+
+  /* Nav */
+  .admin-sidebar__nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .admin-sidebar__nav-list {
+    @apply flex flex-col gap-1;
+  }
+  .admin-sidebar__nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.625rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--sb-text-muted);
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+    border: 1px solid transparent;
+    text-decoration: none;
+  }
+  .admin-sidebar__nav-link:hover {
+    background-color: hsl(0 0% 100% / 0.04);
+    color: var(--sb-text);
+  }
+  :root:not(.dark) .admin-sidebar__nav-link:hover {
+    background-color: hsl(214 32% 92%);
+  }
+
+  .admin-sidebar__nav-link--active {
+    background-color: var(--sb-active-bg);
+    color: var(--sb-text-active);
+    border-color: var(--sb-active-border);
+    font-weight: 600;
+  }
+  .admin-sidebar__nav-link--active:hover {
+    background-color: var(--sb-active-bg);
+    color: var(--sb-text-active);
+  }
+
+  .admin-sidebar__nav-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+  }
+  .admin-sidebar__nav-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+  .admin-sidebar__nav-label {
+    flex: 1 1 auto;
+    line-height: 1.2;
+  }
+
+  /* Footer */
+  .admin-sidebar__footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--sb-border);
+  }
+  .admin-sidebar__theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.625rem;
+    background: transparent;
+    border: 1px solid var(--sb-border);
+    color: var(--sb-text);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 150ms ease;
+    width: 100%;
+  }
+  .admin-sidebar__theme-toggle:hover {
+    background-color: hsl(0 0% 100% / 0.04);
+  }
+  :root:not(.dark) .admin-sidebar__theme-toggle:hover {
+    background-color: hsl(214 32% 92%);
+  }
+  .admin-sidebar__theme-icon {
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+  }
+  .admin-sidebar__theme-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+  .admin-sidebar__theme-icon.hidden {
+    display: none;
+  }
+  .admin-sidebar__theme-label {
+    flex: 1 1 auto;
+    text-align: left;
+  }
+
+  .admin-sidebar__status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--sb-text-muted);
+    padding: 0 0.75rem;
+  }
+  .admin-sidebar__status-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background-color: hsl(160 84% 50%);
+    box-shadow: 0 0 0 4px hsl(160 84% 50% / 0.15);
+  }
+
+  /* ----- Backdrop (mobile) ---------------------------------------------- */
+  .admin-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background-color: hsl(222 47% 4% / 0.55);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+  }
+  .admin-sidebar-backdrop.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ----- Main area ------------------------------------------------------- */
+  .admin-main {
+    margin-left: 16rem;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: hsl(var(--surface-0));
+  }
+
+  /* Topbar */
+  .admin-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background-color: hsl(var(--surface-1) / 0.7);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid hsl(var(--surface-3) / 0.7);
+  }
+  .admin-topbar__left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+  .admin-topbar__menu {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.625rem;
+    background-color: hsl(var(--surface-2) / 0.7);
+    border: 1px solid hsl(var(--surface-3));
+    color: hsl(var(--foreground));
+    cursor: pointer;
+    transition: background-color 150ms ease;
+  }
+  .admin-topbar__menu:hover {
+    background-color: hsl(var(--surface-2));
+  }
+  .admin-topbar__menu svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .admin-topbar__titles {
+    min-width: 0;
+  }
+  .admin-topbar__eyebrow {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: hsl(var(--text-muted));
+    margin-bottom: 0.1rem;
+  }
+  .admin-topbar__title {
+    font-family: "Outfit", "Inter", sans-serif;
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: -0.01em;
+    color: hsl(var(--text-strong));
+    line-height: 1.2;
+    margin: 0;
+  }
+  .admin-topbar__subtitle {
+    margin-top: 0.2rem;
+    font-size: 0.825rem;
+    color: hsl(var(--text-muted));
+  }
+
+  .admin-topbar__right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .admin-topbar__live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 9999px;
+    background-color: hsl(160 84% 39% / 0.12);
+    border: 1px solid hsl(160 84% 39% / 0.3);
+    color: hsl(160 84% 32%);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  :root:not(.dark) .admin-topbar__live {
+    color: hsl(160 84% 28%);
+  }
+  .admin-topbar__live-dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 9999px;
+    background-color: hsl(160 84% 50%);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.6; }
+  }
+
+  .admin-topbar__user {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.4rem 0.625rem 0.4rem 0.4rem;
+    border-radius: 0.625rem;
+    background-color: hsl(var(--surface-2) / 0.7);
+    border: 1px solid hsl(var(--surface-3));
+  }
+  .admin-topbar__avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, hsl(160 84% 39%), hsl(217 91% 60%));
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+  .admin-topbar__user-meta {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+  }
+  .admin-topbar__user-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: hsl(var(--text-strong));
+  }
+  .admin-topbar__user-email {
+    font-size: 0.7rem;
+    color: hsl(var(--text-muted));
+  }
+
+  /* Content */
+  .admin-content {
+    flex: 1 1 auto;
+    padding: 1.5rem;
+  }
+
+  /* ----- Responsive ------------------------------------------------------ */
+  @media (max-width: 1023.98px) {
+    .admin-sidebar {
+      transform: translateX(-100%);
+    }
+    .admin-sidebar.is-open {
+      transform: translateX(0);
+    }
+    .admin-main {
+      margin-left: 0;
+    }
+    .admin-topbar__menu {
+      display: inline-flex;
+    }
+    .admin-topbar__user-meta {
+      display: none;
+    }
+    .admin-topbar__user {
+      padding: 0.25rem;
+    }
+  }
+</style>
+
+<script>
+  /**
+   * Admin sidebar controller.
+   *
+   * 1. Mobile open/close toggle (clicking the hamburger in the topbar).
+   * 2. Click-outside-to-close on mobile.
+   * 3. Mirrors the theme toggle's behavior so the sidebar icon stays in
+   *    sync with the navbar toggle.
+   * 4. Populates the topbar's user avatar / name / email from the
+   *    persistent auth store.
+   * 5. Listens for the "live" badge label updates from page scripts.
+   */
+  import { $theme, applyTheme, toggleTheme, type Theme } from "../../store/themeStore";
+  import { $user, isAdmin } from "../../store/authStore";
+
+  const sidebar = document.querySelector<HTMLElement>("[data-admin-sidebar]");
+  const backdrop = document.querySelector<HTMLElement>("[data-admin-sidebar-backdrop]");
+  const toggleBtn = document.querySelector<HTMLButtonElement>("[data-action='toggle-sidebar']");
+
+  function setSidebarOpen(open: boolean): void {
+    if (!sidebar || !backdrop) return;
+    sidebar.classList.toggle("is-open", open);
+    backdrop.classList.toggle("is-visible", open);
+    sidebar.setAttribute("aria-hidden", open ? "false" : "true");
+  }
+
+  toggleBtn?.addEventListener("click", () => {
+    const isOpen = sidebar?.classList.contains("is-open") ?? false;
+    setSidebarOpen(!isOpen);
+  });
+
+  backdrop?.addEventListener("click", () => setSidebarOpen(false));
+
+  // Auto-close on Escape.
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setSidebarOpen(false);
+  });
+
+  // Theme toggle in the sidebar footer.
+  const themeBtn = document.querySelector<HTMLButtonElement>(
+    "[data-admin-sidebar] [data-action='theme-toggle']",
+  );
+  themeBtn?.addEventListener("click", () => {
+    const next = toggleTheme();
+    applyTheme(next);
+    paintThemeIcons(next);
+  });
+
+  function paintThemeIcons(theme: Theme): void {
+    const sun = document.querySelector<HTMLElement>(
+      "[data-admin-sidebar] [data-theme-icon='sun']",
+    );
+    const moon = document.querySelector<HTMLElement>(
+      "[data-admin-sidebar] [data-theme-icon='moon']",
+    );
+    const label = document.querySelector<HTMLElement>(
+      "[data-admin-sidebar] [data-theme-label]",
+    );
+    if (sun) sun.classList.toggle("hidden", theme !== "dark");
+    if (moon) moon.classList.toggle("hidden", theme !== "light");
+    if (label) {
+      label.textContent = theme === "dark" ? "Switch to light" : "Switch to dark";
+    }
+  }
+
+  paintThemeIcons($theme.get());
+  $theme.listen((next) => {
+    applyTheme(next);
+    paintThemeIcons(next);
+  });
+
+  // Populate the topbar user info from the persistent auth store.
+  function paintUser(): void {
+    const user = $user.get();
+    if (!isAdmin() || !user) return;
+    const nameEl = document.querySelector<HTMLElement>("[data-admin-user-name]");
+    const emailEl = document.querySelector<HTMLElement>("[data-admin-user-email]");
+    const avatarEl = document.querySelector<HTMLElement>("[data-admin-user-avatar]");
+    if (!nameEl || !emailEl || !avatarEl) return;
+    nameEl.textContent = user.name || "Administrator";
+    emailEl.textContent = user.email;
+    const initials = (user.name || user.email)
+      .split(/\s+/)
+      .map((p) => p.charAt(0).toUpperCase())
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("");
+    avatarEl.textContent = initials || "A";
+  }
+
+  paintUser();
+  $user.listen(paintUser);
+
+  /**
+   * Allow page scripts to update the "Live" badge label (e.g. to show
+   * "Updated 5 min ago" after a refresh). Dispatch a CustomEvent on
+   * window with `detail.label` to set the text.
+   */
+  window.addEventListener("spotsync:admin-live-label", (event) => {
+    const target = document.querySelector<HTMLElement>("[data-admin-live-label]");
+    if (!target) return;
+    const detail = (event as CustomEvent<{ label: string }>).detail;
+    if (detail && typeof detail.label === "string") {
+      target.textContent = detail.label;
+    }
+  });
+</script>

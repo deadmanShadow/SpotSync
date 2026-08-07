@@ -522,7 +522,7 @@ Log in as Admin (`admin@spotsync.com`). Navigate to `/admin`.
 ## 📌 Step 9: Toast Notifications & Final Production Build
 
 ### 🎯 Objective
-Polish client UI interactions, ensure error feedback toasts on all API operations, verify mobile/desktop responsiveness, and confirm a clean Astro production build.
+Polish client UI interactions, ensure error feedback toasts using React Hot Toast on all API operations, verify mobile/desktop responsiveness, and confirm a clean Astro production build.
 
 ### 📋 Prerequisites
 - Step 8 completed.
@@ -547,3 +547,75 @@ npm run preview
 - `npm run build` generates production static build directory `dist/` without TypeScript or syntax errors.
 - Preview server runs cleanly at `http://localhost:4321`.
 - Complete flow functional: Register/Login -> Browse Zones -> Reserve Spot with License Plate -> View My Reservations -> Cancel Spot -> Admin Zone Creation & Monitoring.
+
+---
+
+## 📌 Step 10: Codebase Refactoring & Industry-Standard Code Quality Audit
+
+### 🎯 Objective
+Audit and refactor the entire frontend codebase to clean up bloated or redundant ("garbage") code, enforce production-grade industry standards, eliminate magic numbers/strings, modularize oversized components, unify error handling and API services, ensure 100% strict TypeScript typing, and optimize bundle performance.
+
+### 📋 Prerequisites
+- Step 9 completed.
+
+### 📁 Files to Create / Modify
+- `frontend/src/lib/constants.ts` (NEW: Extract magic values, route constants, status color maps, configuration defaults)
+- `frontend/src/lib/utils.ts` (Centralized formatting utilities: currency, date formatting, capacity percentage calculation)
+- `frontend/src/services/api.ts` (Refactor repetitive fetch logic & standardize error mapping)
+- `frontend/src/services/` (`authService.ts`, `zoneService.ts`, `reservationService.ts` — refactor redundant logic)
+- `frontend/src/components/` (Extract bloated inline script blocks and monolithic templates into modular sub-components)
+- `frontend/src/pages/` (`index.astro`, `login.astro`, `register.astro`, `my-reservations.astro`, `admin.astro`)
+
+### 📝 Step Context & Implementation Details
+
+1. **Extraction of Constants & Eliminating Magic Values (`src/lib/constants.ts`)**
+   - Move all hardcoded fallback values, status strings (`'active'`, `'completed'`, `'cancelled'`), zone types (`'general'`, `'ev_charging'`, `'covered'`), and storage keys into immutable type-safe constant structures.
+   - Example:
+     ```typescript
+     export const STORAGE_KEYS = {
+       TOKEN: 'spotsync_token',
+       USER: 'spotsync_user',
+     } as const;
+
+     export const ZONE_TYPES = {
+       GENERAL: 'general',
+       EV_CHARGING: 'ev_charging',
+       COVERED: 'covered',
+     } as const;
+
+     export const CAPACITY_THRESHOLDS = {
+       HIGH: 50,
+       MEDIUM: 20,
+     } as const;
+     ```
+
+2. **Unified Utility & Helper Functions (`src/lib/utils.ts`)**
+   - Centralize currency formatting (`formatCurrency`), date formatting (`formatDate`), and dynamic badge style generators to ensure DRY (Don't Repeat Yourself) code across all components.
+
+3. **API Client & Service Layer Cleanup (`src/services/`)**
+   - Remove boilerplate `fetch` try-catch repeats by enhancing `apiFetch<T>` helper to handle unified error transformation, network timeout resilience, and token refresh/authorization error delegation.
+   - Remove unused/dead parameters, redundant console logs, and temporary debugging code.
+
+4. **Component Modularization & De-bloating (`src/components/` & `src/pages/`)**
+   - Deconstruct monolithic pages into single-responsibility sub-components (e.g., separating heavy inline script logic into modular helper modules in `src/lib/`).
+   - Remove unused Shadcn components or unused package imports to shrink bundle footprint.
+   - Ensure clean HTML semantic structure and zero inline styling hacks.
+
+5. **Strict TypeScript & Anti-Pattern Elimination**
+   - Verify complete type coverage with zero `any` usage or forced `as unknown as T` assertions.
+   - Replace any duplicate interface definitions with imports from centralized domain types (`src/types/`).
+
+### 💻 Execution Commands
+```bash
+cd frontend
+npx astro check
+npm run build
+```
+
+### ✅ Step 10 Verification Checklist
+- `npx astro check` passes with 0 errors and 0 warnings across all `.astro` and `.ts` files.
+- No remaining `console.log` statements, unused imports, or dead code across `src/`.
+- All magic values/strings consolidated into `src/lib/constants.ts`.
+- `npm run build` succeeds cleanly with optimal static bundle size.
+- End-to-end user workflows (authentication, zone catalog browsing, reservation locking, cancellation, and admin monitoring) run smoothly without runtime regressions.
+

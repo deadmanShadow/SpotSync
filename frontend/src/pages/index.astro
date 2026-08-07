@@ -1,33 +1,1042 @@
 ---
+// index.astro — SpotSync home page (Zone catalog + value proposition).
+//
+// The page is built around the principle of "at-a-glance" comprehension:
+// a visitor should know what SpotSync is and how to use it within five
+// seconds of landing. The structure is therefore:
+//
+//   1. Hero      — value proposition + quick action buttons
+//   2. Highlights — three-glass-card feature banner (EV / Guaranteed / Live)
+//   3. Stats     — aggregate counters (zones, EV chargers, available spots)
+//   4. How it works — 3-step visual guide
+//   5. Catalog   — search + filter + zone grid + reserve modal
+//
+// The zone data is fetched server-side at build time so the first paint
+// is fully populated. The client script then wires up:
+//   - search & type-filter reactivity
+//   - reserve modal triggers
+//   - post-reservation refresh of the catalog
+//   - toast notifications
+
 import Layout from "@/layouts/Layout.astro";
+import ZoneCard from "@/components/ZoneCard.astro";
+import ZoneFilter from "@/components/ZoneFilter.astro";
+import ReserveModal from "@/components/ReserveModal.astro";
+import { getZones } from "@/services/zoneService";
+import { getMockZones } from "@/services/mockZoneData";
+import { ApiError } from "@/services/api";
+import type { ParkingZone } from "@/types/zone";
+
+/**
+ * Source-selection flag.
+ *
+ * Drives how the zone CATALOG is sourced on the server.
+ *   - When `false` we hit the Go backend; only fall back to the in-memory
+ *     mock dataset on a network error (so the demo still renders).
+ *   - When `true` we use the mock dataset unconditionally.
+ *
+ * IMPORTANT: Reservation creation is ALWAYS routed to the real backend,
+ * regardless of this flag, so reservations persist to the database and
+ * show up correctly on the driver's "My Reservations" page. Mocking
+ * reservations would silently drop them and the My Reservations view
+ * would always render zero records.
+ */
+const USE_MOCK_DATA = false;
+
+// Fetch zones at build time. If the API is unreachable (or the mock
+// flag is on) we render the 40-zone mock dataset so the page never
+// renders empty.
+let zones: ParkingZone[] = [];
+let fetchError: string | null = null;
+let dataSource: "backend" | "mock" = "mock";
+
+if (USE_MOCK_DATA) {
+  zones = await getMockZones();
+  dataSource = "mock";
+} else {
+  try {
+    zones = await getZones();
+    dataSource = "backend";
+  } catch (error) {
+    // Backend unreachable — fall back to mock data so the demo still
+    // renders. The error is captured so we can show a small notice.
+    if (error instanceof ApiError) {
+      fetchError = error.message;
+    } else if (error instanceof Error) {
+      fetchError = error.message;
+    } else {
+      fetchError = "Could not load zones from the SpotSync API.";
+    }
+    zones = await getMockZones();
+    dataSource = "mock";
+  }
+}
+
+// Aggregate stats for the stats counter bar.
+const totalZones = zones.length;
+const evZones = zones.filter((z) => z.type === "ev_charging");
+const totalEvCapacity = evZones.reduce(
+  (sum, z) => sum + z.total_capacity,
+  0,
+);
+const totalAvailableSpots = zones.reduce(
+  (sum, z) => sum + z.available_spots,
+  0,
+);
+const totalCapacity = zones.reduce((sum, z) => sum + z.total_capacity, 0);
+
+// Type label map for the modal chip.
+const TYPE_LABEL: Record<ParkingZone["type"], string> = {
+  ev_charging: "EV Charging",
+  general: "General",
+  covered: "Covered",
+};
+
+const TYPE_BADGE: Record<ParkingZone["type"], string> = {
+  ev_charging: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
+  general: "bg-blue-500/10 text-blue-300 border-blue-500/30",
+  covered: "bg-purple-500/10 text-purple-300 border-purple-500/30",
+};
+
+const PRICE_FMT = (n: number) => `$${n.toFixed(2)}/hr`;
 ---
 
-<Layout title="SpotSync — Smart Parking & EV Charging">
-  <main class="container mx-auto px-4 py-20">
-    <section class="text-center max-w-3xl mx-auto animate-fade-in">
-      <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm font-medium mb-6">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse-glow"></span>
-        Step 1 — Design System Online
-      </span>
-      <h1 class="font-display text-5xl md:text-6xl font-bold text-slate-50 mb-6 leading-tight">
-        SpotSync
-        <span class="text-gradient-brand"> Frontend</span>
-      </h1>
-      <p class="text-lg text-slate-400 mb-10">
-        Astro + TypeScript + Tailwind CSS + Shadcn UI. Dark glassmorphism design system initialized and ready for the next steps.
-      </p>
+<Layout title="SpotSync — Real-Time Smart Parking & EV Charging Hub">
+  <main class="relative overflow-hidden">
+    <!-- Ambient decorative blobs -->
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
+      <div class="absolute top-20 -left-20 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
+      <div class="absolute top-1/3 -right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+      <div class="absolute bottom-0 left-1/3 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"></div>
+    </div>
 
-      <div class="glass-card p-6 mt-10 text-left">
-        <h2 class="font-display text-xl font-semibold text-slate-100 mb-3">✅ Step 1 — Setup Complete</h2>
-        <ul class="space-y-2 text-slate-300 text-sm">
-          <li>• Astro 4 + TypeScript strict mode</li>
-          <li>• Tailwind CSS with dark glassmorphism tokens</li>
-          <li>• Shadcn UI primitives (button, card, dialog, input, progress, table, badge)</li>
-          <li>• Nano Stores + persistent state</li>
-          <li>• Lucide SVG icons</li>
-          <li>• Backend CORS-ready environment configured</li>
-        </ul>
+    <!-- ============================================================ -->
+    <!-- 1. HERO                                                        -->
+    <!-- ============================================================ -->
+    <section class="container mx-auto px-4 pt-16 md:pt-24 pb-12">
+      <div class="max-w-4xl mx-auto text-center">
+        <span
+          class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm font-medium mb-6"
+          data-live-status
+        >
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse-glow"></span>
+          Real-Time Sync Active
+        </span>
+
+        <h1 class="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-slate-50 leading-tight tracking-tight mb-6">
+          SpotSync
+          <span class="text-gradient-brand block md:inline">
+            Smart Parking & EV Charging Hub
+          </span>
+        </h1>
+
+        <p class="text-lg md:text-xl text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed">
+          Instantly locate, check real-time availability, and reserve
+          guaranteed parking spaces & EV chargers across the city.
+        </p>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <a
+            href="#zone-catalog"
+            class="btn-neon text-base px-6 py-3 inline-flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            Browse Parking Spots
+          </a>
+          <a
+            href="#how-it-works"
+            class="btn-ghost-glass text-base px-6 py-3 inline-flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            How It Works
+          </a>
+        </div>
       </div>
     </section>
+
+    <!-- ============================================================ -->
+    <!-- 2. AT-A-GLANCE FEATURE HIGHLIGHTS                              -->
+    <!-- ============================================================ -->
+    <section class="container mx-auto px-4 pb-12">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+        <div class="glass-card p-6 flex items-start gap-4">
+          <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-emerald-300" aria-hidden="true">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+          </span>
+          <div>
+            <h3 class="font-display text-lg font-bold text-slate-50 mb-1">EV Fast Charging</h3>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Real-time availability tracking for electric vehicle stations, so you never queue for a charger.
+            </p>
+          </div>
+        </div>
+
+        <div class="glass-card p-6 flex items-start gap-4">
+          <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-500/30 flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-blue-300" aria-hidden="true">
+              <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path>
+            </svg>
+          </span>
+          <div>
+            <h3 class="font-display text-lg font-bold text-slate-50 mb-1">Guaranteed Spot</h3>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Instant lock & reservation with zero double-booking. Your spot is reserved the moment you confirm.
+            </p>
+          </div>
+        </div>
+
+        <div class="glass-card p-6 flex items-start gap-4">
+          <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-amber-300" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </span>
+          <div>
+            <h3 class="font-display text-lg font-bold text-slate-50 mb-1">Live Capacity</h3>
+            <p class="text-sm text-slate-400 leading-relaxed">
+              Dynamic visual progress bars showing exact spot availability, refreshed in real time.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 3. LIVE SYSTEM STATS COUNTER BAR                               -->
+    <!-- ============================================================ -->
+    <section class="container mx-auto px-4 pb-16">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+        <div class="glass-card p-6 text-center">
+          <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">
+            Total Zones Managed
+          </p>
+          <p class="font-display text-4xl md:text-5xl font-bold text-gradient-brand" data-stat="totalZones">
+            {totalZones}
+          </p>
+          <p class="text-xs text-slate-500 mt-2">across all parking types</p>
+        </div>
+
+        <div class="glass-card p-6 text-center">
+          <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">
+            EV Charger Capacity
+          </p>
+          <p class="font-display text-4xl md:text-5xl font-bold text-emerald-300" data-stat="evCapacity">
+            {totalEvCapacity}
+          </p>
+          <p class="text-xs text-slate-500 mt-2">
+            in {evZones.length} EV charging zone{evZones.length === 1 ? "" : "s"}
+          </p>
+        </div>
+
+        <div class="glass-card p-6 text-center">
+          <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">
+            Spots Available Right Now
+          </p>
+          <p class="font-display text-4xl md:text-5xl font-bold text-blue-300" data-stat="availableSpots">
+            {totalAvailableSpots}
+          </p>
+          <p class="text-xs text-slate-500 mt-2">
+            of {totalCapacity} total capacity
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 4. HOW IT WORKS                                                -->
+    <!-- ============================================================ -->
+    <section id="how-it-works" class="container mx-auto px-4 pb-16">
+      <div class="text-center mb-10">
+        <h2 class="font-display text-3xl md:text-4xl font-bold text-slate-50 mb-3">
+          How It Works
+        </h2>
+        <p class="text-slate-400 max-w-xl mx-auto">
+          Reserve a guaranteed spot in three simple steps. No accounts to create, no apps to install.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="glass-card p-6 relative">
+          <span class="absolute -top-3 -left-3 w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-bold flex items-center justify-center shadow-lg shadow-emerald-500/40">
+            1
+          </span>
+          <h3 class="font-display text-lg font-bold text-slate-50 mb-2 mt-2">
+            Locate Your Zone
+          </h3>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Search & filter by EV charging, general, or covered parking to find the spot that matches your needs.
+          </p>
+        </div>
+
+        <div class="glass-card p-6 relative">
+          <span class="absolute -top-3 -left-3 w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold flex items-center justify-center shadow-lg shadow-blue-500/40">
+            2
+          </span>
+          <h3 class="font-display text-lg font-bold text-slate-50 mb-2 mt-2">
+            Reserve Your Spot
+          </h3>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Enter your vehicle plate number and lock your spot in seconds. The system guarantees no double-booking.
+          </p>
+        </div>
+
+        <div class="glass-card p-6 relative">
+          <span class="absolute -top-3 -left-3 w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 text-white font-bold flex items-center justify-center shadow-lg shadow-purple-500/40">
+            3
+          </span>
+          <h3 class="font-display text-lg font-bold text-slate-50 mb-2 mt-2">
+            Park & Charge
+          </h3>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Drive directly to your assigned spot with guaranteed space. Manage your reservations anytime.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 5. ZONE CATALOG                                                -->
+    <!-- ============================================================ -->
+    <section id="zone-catalog" class="container mx-auto px-4 pb-24 scroll-mt-20">
+      <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+        <div>
+          <h2 class="font-display text-3xl md:text-4xl font-bold text-slate-50 mb-2">
+            Live Parking Catalog
+          </h2>
+          <p class="text-slate-400">
+            Browse every available zone. Capacity bars refresh in real time.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 text-sm text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse-glow"></span>
+          <span data-sync-label>Auto-syncing — refreshes every 1 hour</span>
+        </div>
+      </div>
+
+      <div class="mb-6">
+        <ZoneFilter />
+      </div>
+
+      {fetchError && (
+        <div class="glass-card p-6 mb-6 border-red-500/40 bg-red-500/5">
+          <div class="flex items-start gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <div>
+              <p class="text-red-200 font-semibold mb-1">Unable to load zones</p>
+              <p class="text-sm text-red-300/80">{fetchError}</p>
+              <p class="text-xs text-slate-400 mt-2">
+                Make sure the SpotSync backend is running at the URL configured in <code class="px-1 py-0.5 rounded bg-slate-800/60 text-slate-300">PUBLIC_API_BASE_URL</code>.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <!-- Empty state -->
+      {!fetchError && zones.length === 0 && (
+        <div class="glass-card p-12 text-center">
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-slate-800/60 border border-slate-700/60 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-slate-400" aria-hidden="true">
+              <rect width="7" height="7" x="3" y="3" rx="1"></rect>
+              <rect width="7" height="7" x="14" y="3" rx="1"></rect>
+              <rect width="7" height="7" x="14" y="14" rx="1"></rect>
+              <rect width="7" height="7" x="3" y="14" rx="1"></rect>
+            </svg>
+          </div>
+          <h3 class="font-display text-xl font-bold text-slate-100 mb-2">
+            No zones yet
+          </h3>
+          <p class="text-slate-400 max-w-md mx-auto mb-6">
+            The catalog is empty. An admin can create the first parking zone from the Admin Dashboard.
+          </p>
+          <a href="/admin" class="btn-neon inline-flex items-center gap-2">
+            Open Admin Dashboard
+          </a>
+        </div>
+      )}
+
+      <!-- Zone grid -->
+      {zones.length > 0 && (
+        <div
+          class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+          data-zone-grid
+          id="zone-grid"
+        >
+          {zones.map((zone) => <ZoneCard zone={zone} />)}
+        </div>
+      )}
+
+      <!-- No-results state for client-side filtering -->
+      <div
+        id="zone-no-results"
+        class="hidden glass-card p-10 text-center mt-6"
+        data-no-results
+      >
+        <p class="text-slate-300 font-semibold mb-1">No zones match your filters</p>
+        <p class="text-sm text-slate-500">Try selecting a different type or clearing your search.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- RESERVE MODAL                                                  -->
+    <!-- ============================================================ -->
+    <ReserveModal />
   </main>
 </Layout>
+
+<script>
+  // -----------------------------------------------------------------
+  // Client-side wiring for the home page.
+  //
+  // Responsibilities:
+  //   1. Wire the search input -> re-filter the zone grid client-side.
+  //   2. Wire the type filter tabs -> re-filter the zone grid.
+  //   3. Wire the "Reserve Spot" triggers -> open the modal preloaded
+  //      with the selected zone's metadata.
+  //   4. Submit the reservation form -> POST /reservations, handle
+  //      409 (zone full) gracefully, refetch the catalog on success.
+  // -----------------------------------------------------------------
+
+  import { getZones } from "../services/zoneService";
+  import { createReservation } from "../services/reservationService";
+  import {
+    getMockZones,
+    startRotationTimer,
+    ROTATION_INTERVAL_MS,
+    AVAILABLE_TARGET_PERCENT,
+  } from "../services/mockZoneData";
+  import { ApiError } from "../services/api";
+  import { $isAuthenticated } from "../store/authStore";
+  import type { ParkingZone } from "../types/zone";
+
+  /**
+   * Mirrors the server-side `USE_MOCK_DATA` flag. When true we
+   * route every client-side refetch through the mock service so the
+   * catalog stays consistent across SSR + client refreshes.
+   *
+   * NOTE: even when this flag is true the *reservation create* call
+   * is unconditionally routed to the real backend so reservations
+   * persist to the DB (and appear on /my-reservations).
+   */
+  const USE_MOCK_DATA = false;
+
+  /** Active data source for refetches. Defaults to mock. */
+  let dataSource: "backend" | "mock" = "mock";
+
+  /**
+   * Pulls the current zone list using whichever service the page is
+   * configured to use. Centralised so the reservation success path,
+   * the rotation handler, and any future "manual refresh" button all
+   * share one code path.
+   */
+  async function refetchFromActiveSource(): Promise<ParkingZone[]> {
+    if (USE_MOCK_DATA) return getMockZones();
+    try {
+      return await getZones();
+    } catch {
+      // Backend went down after the initial load — silently fall back.
+      return getMockZones();
+    }
+  }
+
+  /**
+   * Submit a reservation. Always routed to the real backend so the
+   * reservation lands in the database and shows up on the driver's
+   * "My Reservations" page.
+   *
+   * The mock service (createMockReservation) is intentionally NOT used
+   * here — it writes to an in-memory module-scope ledger that is lost
+   * on page refresh and never reaches the Go API, so the driver would
+   * always see 0 reservations on /my-reservations.
+   */
+  async function submitReservation(payload: {
+    zone_id: number;
+    license_plate: string;
+  }): Promise<unknown> {
+    return createReservation(payload);
+  }
+
+  // ---------- Utilities ----------
+
+  // We deliberately re-import the type labels so the modal chips update
+  // even after a refetch (the server-rendered HTML only has the initial set).
+  const TYPE_LABEL: Record<ParkingZone["type"], string> = {
+    ev_charging: "EV Charging",
+    general: "General",
+    covered: "Covered",
+  };
+
+  const TYPE_BADGE: Record<ParkingZone["type"], string> = {
+    ev_charging: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
+    general: "bg-blue-500/10 text-blue-300 border-blue-500/30",
+    covered: "bg-purple-500/10 text-purple-300 border-purple-500/30",
+  };
+
+  // Global toast helper exposed by Layout.astro's <script>.
+  type ToastType = "success" | "error" | "info";
+  type W = Window & { showToast?: (msg: string, type?: ToastType) => void };
+  function toast(msg: string, type: ToastType = "info"): void {
+    const w = window as unknown as W;
+    if (typeof w.showToast === "function") {
+      w.showToast(msg, type);
+    } else {
+      // Fallback if toast container isn't available yet.
+      console.log(`[toast:${type}] ${msg}`);
+    }
+  }
+
+  function escapeHtml(input: string): string {
+    return input
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  // ---------- Filtering ----------
+
+  // State for the active filter tab.
+  let activeFilter: "all" | ParkingZone["type"] = "all";
+
+  function applyFilters(): void {
+    const grid = document.querySelector<HTMLDivElement>("[data-zone-grid]");
+    if (!grid) return;
+    const cards = Array.from(
+      grid.querySelectorAll<HTMLElement>("[data-zone-card]"),
+    );
+    const searchInput = document.querySelector<HTMLInputElement>(
+      "[data-zone-search]",
+    );
+    const query = (searchInput?.value ?? "").trim().toLowerCase();
+
+    let visibleCount = 0;
+    for (const card of cards) {
+      const type = card.dataset.zoneType ?? "";
+      const name = (card.dataset.zoneName ?? "").toLowerCase();
+      const id = card.dataset.zoneId ?? "";
+
+      const matchesType = activeFilter === "all" || type === activeFilter;
+      const matchesQuery =
+        query.length === 0 ||
+        name.includes(query) ||
+        id.includes(query);
+
+      const show = matchesType && matchesQuery;
+      card.classList.toggle("hidden", !show);
+      if (show) visibleCount++;
+    }
+
+    // Toggle the empty-results state.
+    const noResults = document.querySelector<HTMLElement>("[data-no-results]");
+    if (noResults) {
+      noResults.classList.toggle("hidden", visibleCount > 0);
+    }
+  }
+
+  function bindFilterTabs(): void {
+    const tabs = document.querySelectorAll<HTMLButtonElement>(
+      "[data-filter-tab]",
+    );
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        tabs.forEach((t) => {
+          const isActive = t === tab;
+          t.setAttribute("aria-selected", isActive ? "true" : "false");
+          t.classList.toggle("bg-emerald-500/15", isActive);
+          t.classList.toggle("text-emerald-300", isActive);
+          t.classList.toggle("border-emerald-500/40", isActive);
+          t.classList.toggle("bg-slate-800/40", !isActive);
+          t.classList.toggle("text-slate-300", !isActive);
+          t.classList.toggle("border-slate-700/60", !isActive);
+        });
+        const key = tab.dataset.filterTab as typeof activeFilter;
+        activeFilter = key;
+        applyFilters();
+      });
+    });
+  }
+
+  function bindSearchInput(): void {
+    const input = document.querySelector<HTMLInputElement>(
+      "[data-zone-search]",
+    );
+    if (!input) return;
+    input.addEventListener("input", () => {
+      applyFilters();
+    });
+  }
+
+  // ---------- Reserve modal ----------
+
+  // Tracking the currently-selected zone so the modal can render chips.
+  let selectedZone: ParkingZone | null = null;
+
+  function getDialog(): HTMLDialogElement | null {
+    return document.querySelector<HTMLDialogElement>("[data-reserve-modal]");
+  }
+
+  function openModal(zone: ParkingZone): void {
+    selectedZone = zone;
+    const dialog = getDialog();
+    if (!dialog) return;
+
+    // Update header text.
+    const titleEl = dialog.querySelector<HTMLElement>("[data-zone-name]");
+    if (titleEl) titleEl.textContent = `Reserve at ${zone.name}`;
+
+    // Update type/price chips.
+    const idChip = dialog.querySelector<HTMLElement>("[data-zone-id-chip]");
+    if (idChip) idChip.textContent = `#${zone.id}`;
+
+    const typeChip = dialog.querySelector<HTMLElement>("[data-zone-type-chip]");
+    if (typeChip) {
+      typeChip.textContent = TYPE_LABEL[zone.type] ?? zone.type;
+      typeChip.className = `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${TYPE_BADGE[zone.type] ?? "bg-slate-800/60 text-slate-200 border-slate-700/60"}`;
+    }
+
+    const priceChip = dialog.querySelector<HTMLElement>("[data-zone-price-chip]");
+    if (priceChip) priceChip.textContent = `$${zone.price_per_hour.toFixed(2)}/hr`;
+
+    // Update hidden zone id.
+    const idInput = dialog.querySelector<HTMLInputElement>(
+      "[data-zone-id-input]",
+    );
+    if (idInput) idInput.value = String(zone.id);
+
+    // Reset form state.
+    const form = dialog.querySelector<HTMLFormElement>("[data-reserve-form]");
+    if (form) form.reset();
+    if (idInput) idInput.value = String(zone.id); // re-set after reset
+
+    hideError();
+
+    // Open the dialog.
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+      // Autofocus the license plate field for fast entry.
+      const plate =
+        dialog.querySelector<HTMLInputElement>("[data-license-plate]");
+      window.setTimeout(() => plate?.focus(), 50);
+    } else {
+      // Fallback for very old browsers — render as a simple overlay.
+      dialog.setAttribute("open", "true");
+    }
+  }
+
+  function closeModal(): void {
+    const dialog = getDialog();
+    if (!dialog) return;
+    if (typeof dialog.close === "function") {
+      dialog.close();
+    } else {
+      dialog.removeAttribute("open");
+    }
+    selectedZone = null;
+  }
+
+  function showError(message: string): void {
+    const dialog = getDialog();
+    if (!dialog) return;
+    const errorEl = dialog.querySelector<HTMLElement>("[data-reserve-error]");
+    const textEl = dialog.querySelector<HTMLElement>(
+      "[data-reserve-error-text]",
+    );
+    if (errorEl) errorEl.classList.remove("hidden");
+    if (textEl) textEl.textContent = message;
+  }
+
+  function hideError(): void {
+    const dialog = getDialog();
+    if (!dialog) return;
+    const errorEl = dialog.querySelector<HTMLElement>("[data-reserve-error]");
+    if (errorEl) errorEl.classList.add("hidden");
+  }
+
+  function bindReserveTriggers(): void {
+    const triggers = document.querySelectorAll<HTMLButtonElement>(
+      "[data-reserve-trigger]",
+    );
+    triggers.forEach((btn) => {
+      btn.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (btn.disabled) return;
+
+        // Auth guard: prompt sign-in if no session.
+        if (!$isAuthenticated.get()) {
+          toast("Please sign in to reserve a spot.", "info");
+          window.location.href = "/login";
+          return;
+        }
+
+        const zoneId = Number(btn.dataset.zoneId);
+        if (!Number.isFinite(zoneId)) return;
+
+        // Build the zone object from the card's data-* attributes so we
+        // don't need an extra round-trip to /zones/:id.
+        const card = btn.closest<HTMLElement>("[data-zone-card]");
+        if (!card) return;
+
+        const zone: ParkingZone = {
+          id: zoneId,
+          name: card.dataset.zoneName ?? "",
+          type: (card.dataset.zoneType as ParkingZone["type"]) ?? "general",
+          total_capacity: Number(card.dataset.zoneTotal ?? 0),
+          available_spots: Number(card.dataset.zoneAvailable ?? 0),
+          price_per_hour: 0, // filled by the server card if needed; modal uses card data
+          created_at: "",
+        };
+
+        openModal(zone);
+      });
+    });
+  }
+
+  function bindModalClose(): void {
+    const dialog = getDialog();
+    if (!dialog) return;
+    const closeButtons = dialog.querySelectorAll<HTMLButtonElement>(
+      "[data-reserve-close]",
+    );
+    closeButtons.forEach((btn) => {
+      btn.addEventListener("click", (event) => {
+        event.preventDefault();
+        closeModal();
+      });
+    });
+
+    // Click on backdrop closes the modal.
+    dialog.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      if (target === dialog) {
+        closeModal();
+      }
+    });
+
+    // ESC key is handled natively by <dialog>, but make sure we clear
+    // selection so the next open is a fresh form.
+    dialog.addEventListener("close", () => {
+      selectedZone = null;
+    });
+  }
+
+  function bindReserveSubmit(): void {
+    const dialog = getDialog();
+    if (!dialog) return;
+    const form = dialog.querySelector<HTMLFormElement>("[data-reserve-form]");
+    const submitBtn = dialog.querySelector<HTMLButtonElement>(
+      "[data-reserve-submit]",
+    );
+    const submitLabel = dialog.querySelector<HTMLElement>(
+      "[data-reserve-submit-label]",
+    );
+    if (!form || !submitBtn || !submitLabel) return;
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      if (!selectedZone) {
+        showError("No zone selected. Please close the dialog and try again.");
+        return;
+      }
+
+      const formData = new FormData(form);
+      const license_plate = String(formData.get("license_plate") ?? "").trim();
+      if (license_plate.length < 2) {
+        showError("Please enter a valid license plate (min 2 characters).");
+        return;
+      }
+
+      // Disable button + show inline spinner.
+      submitBtn.disabled = true;
+      const originalLabel = submitLabel.textContent ?? "Confirm Reservation";
+      submitLabel.textContent = "Reserving…";
+
+      try {
+        await submitReservation({
+          zone_id: selectedZone.id,
+          license_plate,
+        });
+
+        toast(
+          `Spot reserved at ${selectedZone.name} for plate ${license_plate.toUpperCase()}.`,
+          "success",
+        );
+        closeModal();
+
+        // Refetch the catalog so the capacity bar updates immediately.
+        await refetchZones();
+      } catch (error) {
+        if (error instanceof ApiError) {
+          if (error.status === 409) {
+            showError(
+              "This zone is full. Another driver reserved the last spot — please pick a different zone.",
+            );
+          } else if (error.status === 401) {
+            showError("Your session has expired. Please sign in again.");
+            window.setTimeout(() => {
+              window.location.href = "/login";
+            }, 1500);
+          } else if (error.status === 400) {
+            showError(error.message || "Invalid license plate. Please try again.");
+          } else {
+            showError(error.message || "Could not create reservation. Please try again.");
+          }
+        } else if (error instanceof Error) {
+          showError(error.message);
+        } else {
+          showError("Could not create reservation. Please try again.");
+        }
+      } finally {
+        submitBtn.disabled = false;
+        submitLabel.textContent = originalLabel;
+      }
+    });
+  }
+
+  // ---------- Refresh catalog after reservation ----------
+
+  /**
+   * Replace the zone grid + stats with a fresh server fetch.
+   * Preserves the current filter state and re-applies it to the new cards.
+   */
+  async function refetchZones(): Promise<void> {
+    try {
+      const fresh = await refetchFromActiveSource();
+      renderZones(fresh);
+      renderStats(fresh);
+      applyFilters();
+    } catch (error) {
+      // Soft-fail: keep the existing grid, just notify the user.
+      toast("Could not refresh the catalog. Please reload the page.", "error");
+      console.error("refetchZones failed:", error);
+    }
+  }
+
+  // Re-render the zone grid with new data. We rebuild the inner HTML
+  // to match the markup produced by ZoneCard.astro.
+  function renderZones(zones: ParkingZone[]): void {
+    const grid = document.querySelector<HTMLDivElement>("[data-zone-grid]");
+    if (!grid) return;
+    grid.innerHTML = zones.map((zone) => cardHtml(zone)).join("");
+    // Re-bind the reserve triggers for the new cards.
+    bindReserveTriggers();
+  }
+
+  // Recompute the stats counter bar.
+  function renderStats(zones: ParkingZone[]): void {
+    const evZones = zones.filter((z) => z.type === "ev_charging");
+    const totalEvCapacity = evZones.reduce((s, z) => s + z.total_capacity, 0);
+    const totalAvailable = zones.reduce((s, z) => s + z.available_spots, 0);
+
+    const totalEl = document.querySelector<HTMLElement>('[data-stat="totalZones"]');
+    const evEl = document.querySelector<HTMLElement>('[data-stat="evCapacity"]');
+    const availEl = document.querySelector<HTMLElement>('[data-stat="availableSpots"]');
+    if (totalEl) totalEl.textContent = String(zones.length);
+    if (evEl) evEl.textContent = String(totalEvCapacity);
+    if (availEl) availEl.textContent = String(totalAvailable);
+  }
+
+  // Mirror the ZoneCard.astro template so a refetch can replace the grid
+  // without a full page reload. Kept in sync with the Astro component.
+  function cardHtml(zone: ParkingZone): string {
+    const total = Math.max(0, zone.total_capacity);
+    const available = Math.max(0, zone.available_spots);
+    const occupied = Math.max(0, total - available);
+    const fillPercent = total === 0 ? 0 : Math.min(100, (available / total) * 100);
+    const isFull = available <= 0;
+
+    let barColor = "bg-emerald-500";
+    let barShadow = "shadow-emerald-500/40";
+    let statusLabel = "Open";
+    let statusPill = "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
+    if (isFull) {
+      barColor = "bg-red-500";
+      barShadow = "shadow-red-500/40";
+      statusLabel = "Full";
+      statusPill = "bg-red-500/10 text-red-300 border-red-500/30";
+    } else if (fillPercent < 20) {
+      barColor = "bg-red-500";
+      barShadow = "shadow-red-500/40";
+      statusLabel = "Almost Full";
+      statusPill = "bg-red-500/10 text-red-300 border-red-500/30";
+    } else if (fillPercent < 50) {
+      barColor = "bg-amber-500";
+      barShadow = "shadow-amber-500/40";
+      statusLabel = "Filling Up";
+      statusPill = "bg-amber-500/10 text-amber-300 border-amber-500/30";
+    }
+
+    const typeBadge = TYPE_BADGE[zone.type] ?? "bg-slate-800/60 text-slate-200 border-slate-700/60";
+    const typeLabel = TYPE_LABEL[zone.type] ?? zone.type;
+
+    const iconForType = (t: ParkingZone["type"]): string => {
+      if (t === "ev_charging") {
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>';
+      }
+      if (t === "general") {
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5" aria-hidden="true"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>';
+      }
+      return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>';
+    };
+
+    const buttonHtml = isFull
+      ? `<button type="button" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all bg-slate-800/60 text-slate-500 border border-slate-700/60 cursor-not-allowed" data-reserve-trigger data-zone-id="${zone.id}" disabled aria-disabled="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+          Zone Full
+        </button>`
+      : `<button type="button" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:from-emerald-400 hover:to-emerald-500" data-reserve-trigger data-zone-id="${zone.id}">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          Reserve Spot
+        </button>`;
+
+    return `
+      <article
+        class="glass-card p-6 flex flex-col gap-4 group hover:border-slate-700/80 transition-all"
+        data-zone-card
+        data-zone-id="${zone.id}"
+        data-zone-name="${escapeHtml(zone.name)}"
+        data-zone-type="${zone.type}"
+        data-zone-available="${available}"
+        data-zone-total="${total}"
+      >
+        <header class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h3 class="font-display text-xl font-bold text-slate-50 leading-tight truncate">${escapeHtml(zone.name)}</h3>
+            <p class="text-xs text-slate-400 mt-1">Zone #${zone.id}</p>
+          </div>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border whitespace-nowrap ${typeBadge}">
+            ${iconForType(zone.type)}
+            ${typeLabel}
+          </span>
+        </header>
+
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center px-3 py-1 rounded-lg bg-slate-800/60 border border-slate-700/60 text-sm font-semibold text-slate-100">
+            $${zone.price_per_hour.toFixed(2)}/hr
+          </span>
+          <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border ${statusPill}">
+            ${statusLabel}
+          </span>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-slate-300">
+              <span class="font-bold text-slate-50" data-available-count>${available}</span>
+              <span class="text-slate-400"> of </span>
+              <span class="font-semibold text-slate-100" data-total-count>${total}</span>
+              <span class="text-slate-400"> spots available</span>
+            </span>
+            <span class="text-xs text-slate-500" data-fill-percent>${Math.round(fillPercent)}%</span>
+          </div>
+          <div class="h-2.5 w-full bg-slate-800/80 rounded-full overflow-hidden border border-slate-700/50">
+            <div class="h-full rounded-full transition-all duration-500 shadow-lg ${barColor} ${barShadow}" style="width: ${fillPercent}%" data-progress-bar></div>
+          </div>
+          <p class="text-xs text-slate-500">${occupied} spot${occupied === 1 ? "" : "s"} currently occupied</p>
+        </div>
+
+        <div class="pt-2 mt-auto">
+          ${buttonHtml}
+        </div>
+      </article>
+    `;
+  }
+
+  // ---------- Init ----------
+
+  // ---------- Rotation wiring ----------
+
+  /**
+   * Boot the 1-hour availability rotation timer. The timer fires a
+   * custom DOM event ("spotsync:zones-rotated") which we listen for
+   * to refetch + repaint the catalog. Using a custom event keeps the
+   * mock data service decoupled from any specific page.
+   *
+   * For demos / tests the interval can be overridden by setting
+   * `window.__SPOTSYNC_ROTATION_MS__` to a number (in ms) before the
+   * page hydrates.
+   */
+  function bootRotationTimer(): void {
+    const override = (window as unknown as {
+      __SPOTSYNC_ROTATION_MS__?: number;
+    }).__SPOTSYNC_ROTATION_MS__;
+    const intervalMs =
+      typeof override === "number" && override > 0
+        ? override
+        : ROTATION_INTERVAL_MS;
+    startRotationTimer(intervalMs);
+  }
+
+  /**
+   * Listen for the rotation event dispatched by `mockZoneData` and
+   * repaint the catalog + stats counters. Also shows a soft toast so
+   * the user notices the live update.
+   */
+  function bindRotationEvents(): void {
+    if (typeof window === "undefined") return;
+    bootRotationTimer();
+
+    window.addEventListener("spotsync:zones-rotated", () => {
+      void refetchZones().then(() => {
+        toast("Zone availability updated.", "info", 2500);
+      });
+    });
+  }
+
+  /**
+   * Update the "Auto-syncing" label to reflect the configured rotation
+   * interval in human-readable form (e.g. "refreshes every 1 hour" or
+   * "refreshes every 30 seconds" for test overrides).
+   */
+  function bindSyncLabel(): void {
+    const label = document.querySelector<HTMLElement>("[data-sync-label]");
+    if (!label) return;
+
+    const override = (window as unknown as {
+      __SPOTSYNC_ROTATION_MS__?: number;
+    }).__SPOTSYNC_ROTATION_MS__;
+    const intervalMs =
+      typeof override === "number" && override > 0
+        ? override
+        : ROTATION_INTERVAL_MS;
+
+    label.textContent = `Auto-syncing — refreshes every ${formatInterval(
+      intervalMs,
+    )}`;
+  }
+
+  function formatInterval(ms: number): string {
+    if (ms < 60_000) return `${Math.round(ms / 1000)} seconds`;
+    if (ms < 3_600_000) return `${Math.round(ms / 60_000)} minutes`;
+    return `${Math.round(ms / 3_600_000)} hour${
+      Math.round(ms / 3_600_000) === 1 ? "" : "s"
+    }`;
+  }
+
+  function init(): void {
+    bindFilterTabs();
+    bindSearchInput();
+    bindReserveTriggers();
+    bindModalClose();
+    bindReserveSubmit();
+    bindRotationEvents();
+    bindSyncLabel();
+    void AVAILABLE_TARGET_PERCENT;
+  }
+
+  init();
+</script>

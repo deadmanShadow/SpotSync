@@ -104,7 +104,14 @@ func (r *zoneRepository) CountActiveReservations(zoneID uint) (int64, error) {
 }
 
 // FindAllWithAvailability returns every parking zone with a dynamically
-// computed AvailableSpots value: total_capacity - active reservations.
+// computed AvailableSpots value:
+//
+//	available_spots = total_capacity - active_reservations - rotation_hold
+//
+// The `rotation_hold` column is owned by the ZoneRotator (see
+// internal/seeder/rotator.go) and is used to mark a zone as "full" for
+// display purposes without inserting fake rows into the reservations
+// table.
 //
 // The availability calculation is performed in a single SQL query using a
 // correlated subquery against the reservations table, so callers do not need
@@ -125,8 +132,11 @@ func (r *zoneRepository) FindAllWithAvailability() ([]dto.ZoneResponse, error) {
 	err := r.db.
 		Table("parking_zones pz").
 		Select(`pz.id, pz.name, pz.type, pz.total_capacity,
-		        (pz.total_capacity - COALESCE((SELECT COUNT(*) FROM reservations r
-		            WHERE r.zone_id = pz.id AND r.status = 'active'), 0)) AS available_spots,
+		        GREATEST(0, pz.total_capacity
+		            - COALESCE((SELECT COUNT(*) FROM reservations r
+		                WHERE r.zone_id = pz.id AND r.status = 'active'), 0)
+		            - pz.rotation_hold
+		        ) AS available_spots,
 		        pz.price_per_hour, pz.created_at, pz.updated_at`).
 		Order("pz.id ASC").
 		Scan(&rows).Error
@@ -174,8 +184,11 @@ func (r *zoneRepository) FindByIDWithAvailability(id uint) (*dto.ZoneResponse, e
 	err := r.db.
 		Table("parking_zones pz").
 		Select(`pz.id, pz.name, pz.type, pz.total_capacity,
-		        (pz.total_capacity - COALESCE((SELECT COUNT(*) FROM reservations r
-		            WHERE r.zone_id = pz.id AND r.status = 'active'), 0)) AS available_spots,
+		        GREATEST(0, pz.total_capacity
+		            - COALESCE((SELECT COUNT(*) FROM reservations r
+		                WHERE r.zone_id = pz.id AND r.status = 'active'), 0)
+		            - pz.rotation_hold
+		        ) AS available_spots,
 		        pz.price_per_hour, pz.created_at, pz.updated_at`).
 		Where("pz.id = ?", id).
 		Scan(&r0).Error

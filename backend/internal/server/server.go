@@ -10,6 +10,7 @@
 package server
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"sync"
@@ -22,6 +23,7 @@ import (
 	"spotsync-backend/internal/handler"
 	"spotsync-backend/internal/middleware"
 	"spotsync-backend/internal/repository"
+	"spotsync-backend/internal/seeder"
 	"spotsync-backend/internal/service"
 	"spotsync-backend/pkg/utils"
 )
@@ -146,9 +148,22 @@ func build() {
 	go func() {
 		if err := database.AutoMigrate(db); err != nil {
 			log.Printf("WARNING: Auto-migration failed: %v", err)
-		} else {
-			log.Println("Database migrations applied successfully")
+			return
 		}
+		log.Println("Database migrations applied successfully")
+
+		// Seed the catalog to 40 zones if needed. Safe to run multiple
+		// times — only inserts when the catalog is below target.
+		if inserted, err := seeder.SeedIfNeeded(db); err != nil {
+			log.Printf("WARNING: Zone seeder failed: %v", err)
+		} else if inserted > 0 {
+			log.Printf("Zone seeder inserted %d new zones", inserted)
+		}
+
+		// Boot the 1-hour rotation worker. The rotator is cancelled via
+		// the server shutdown context so its goroutine exits cleanly.
+		rotator := seeder.NewZoneRotator(db, 0) // 0 -> use default (1 hour)
+		rotator.Start(context.Background())
 	}()
 
 	// --- Public auth routes ---

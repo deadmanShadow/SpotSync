@@ -9,7 +9,7 @@
  * current section.
  *
  * Inner shell layout:
- *   .admin-shell__
+ *   .admin-shell
  *     <aside data-admin-sidebar>  - The fixed sidebar
  *     <div data-admin-content>   - The main content scroll area
  *
@@ -85,33 +85,28 @@ const { title, subtitle } = Astro.props as Props;
 const pageTitle = title ?? activeItem.label;
 ---
 
-<div class="admin-shell" data-admin-shell data-active-key={activeItem.key}>
+<div class="admin-shell min-h-screen w-full" data-admin-shell data-active-key={activeItem.key}>
   <!-- ====================================================================
        Sidebar
        ==================================================================== -->
   <aside
-    class="admin-sidebar"
+    class="admin-sidebar fixed top-0 left-0 z-40 w-64 h-screen bg-white/92 backdrop-blur-[14px] border-r border-[hsl(214_32%_88%)] text-[hsl(222.2_47%_11%)] transition-[transform,width] duration-250 lg:translate-x-0 max-lg:-translate-x-full dark:bg-[hsl(222.2_47%_9%/0.92)] dark:border-[hsl(217.2_32.6%_17.5%/0.8)] dark:text-[hsl(210_40%_93%)]"
     data-admin-sidebar
     aria-label="Admin navigation"
     aria-hidden="false"
   >
-    <div class="admin-sidebar__inner">
+    <div class="admin-sidebar__inner flex flex-col h-full py-5 px-4">
       <!-- Brand block -->
-      <a href="/admin" class="admin-sidebar__brand" aria-label="SpotSync admin home">
-        <span class="admin-sidebar__brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="admin-sidebar__brand-icon">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-          </svg>
-        </span>
-        <span class="admin-sidebar__brand-text">
-          <span class="admin-sidebar__brand-name">SpotSync</span>
-          <span class="admin-sidebar__brand-suffix">Admin Console</span>
+      <a href="/admin" class="admin-sidebar__brand flex items-center gap-3 py-2 px-3 mb-6 rounded-xl text-[hsl(222.2_47%_11%)] transition-colors duration-200 hover:bg-[hsl(214_32%_92%)] dark:text-[hsl(210_40%_93%)] dark:hover:bg-white/[0.04]" aria-label="SpotSync admin home">
+        <span class="admin-sidebar__brand-text flex flex-col leading-[1.1]">
+          <span class="admin-sidebar__brand-name font-display font-bold text-[1.05rem] tracking-[-0.01em]">SpotSync</span>
+          <span class="admin-sidebar__brand-suffix text-[0.7rem] text-[hsl(215_16%_47%)] uppercase tracking-[0.08em] font-medium mt-[0.15rem] dark:text-[hsl(215_20%_65%)]">Admin Console</span>
         </span>
       </a>
 
       <!-- Nav items -->
-      <nav class="admin-sidebar__nav" aria-label="Sections">
-        <ul role="list" class="admin-sidebar__nav-list">
+      <nav class="admin-sidebar__nav flex-1 min-h-0 overflow-y-auto" aria-label="Sections">
+        <ul role="list" class="admin-sidebar__nav-list flex flex-col gap-1">
           {navItems.map((item) => {
             const isActive = item.match ? item.match(pathname) : pathname === item.href;
             return (
@@ -119,12 +114,12 @@ const pageTitle = title ?? activeItem.label;
                 <a
                   href={item.href}
                   class:list={[
-                    "admin-sidebar__nav-link",
-                    isActive && "admin-sidebar__nav-link--active",
+                    "admin-sidebar__nav-link flex items-center gap-3 py-[0.625rem] px-3 rounded-[0.625rem] text-sm font-medium text-[hsl(215_16%_47%)] transition-[background-color,color,border-color] duration-150 border border-transparent no-underline hover:bg-[hsl(214_32%_92%)] hover:text-[hsl(222.2_47%_11%)] dark:text-[hsl(215_20%_65%)] dark:hover:bg-white/[0.04] dark:hover:text-[hsl(210_40%_93%)]",
+                    isActive && "admin-sidebar__nav-link--active bg-[hsl(160_84%_92%)] text-[hsl(160_84%_30%)] border-[hsl(160_84%_60%)] font-semibold hover:bg-[hsl(160_84%_92%)] hover:text-[hsl(160_84%_30%)] dark:bg-[hsl(160_84%_39%/0.12)] dark:text-[hsl(160_84%_70%)] dark:border-[hsl(160_84%_39%/0.4)] dark:hover:bg-[hsl(160_84%_39%/0.12)] dark:hover:text-[hsl(160_84%_70%)]",
                   ]}
                   aria-current={isActive ? "page" : undefined}
                 >
-                  <span class="admin-sidebar__nav-icon" aria-hidden="true">
+                  <span class="admin-sidebar__nav-icon inline-flex items-center justify-center w-5 h-5 shrink-0 [&_svg]:w-full [&_svg]:h-full" aria-hidden="true">
                     {item.icon === "overview" && (
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="3" width="7" height="9" rx="1.5"></rect>
@@ -166,7 +161,7 @@ const pageTitle = title ?? activeItem.label;
                       </svg>
                     )}
                   </span>
-                  <span class="admin-sidebar__nav-label">{item.label}</span>
+                  <span class="admin-sidebar__nav-label flex-1 leading-[1.2]">{item.label}</span>
                 </a>
               </li>
             );
@@ -175,15 +170,15 @@ const pageTitle = title ?? activeItem.label;
       </nav>
 
       <!-- Footer block: theme + status -->
-      <div class="admin-sidebar__footer">
+      <div class="admin-sidebar__footer flex flex-col gap-[0.625rem] mt-4 pt-4 border-t border-[hsl(214_32%_88%)] dark:border-[hsl(217.2_32.6%_17.5%/0.8)]">
         <button
           type="button"
-          class="admin-sidebar__theme-toggle"
+          class="admin-sidebar__theme-toggle flex items-center gap-3 py-2 px-3 rounded-[0.625rem] bg-transparent border border-[hsl(214_32%_88%)] text-[hsl(222.2_47%_11%)] text-[0.85rem] font-medium cursor-pointer transition-colors duration-150 w-full hover:bg-[hsl(214_32%_92%)] dark:border-[hsl(217.2_32.6%_17.5%/0.8)] dark:text-[hsl(210_40%_93%)] dark:hover:bg-white/[0.04]"
           data-action="theme-toggle"
           aria-label="Toggle dark / light theme"
           title="Toggle theme"
         >
-          <span class="admin-sidebar__theme-icon" data-theme-icon="sun" aria-hidden="true">
+          <span class="admin-sidebar__theme-icon inline-flex w-4 h-4 [&_svg]:w-full [&_svg]:h-full" data-theme-icon="sun" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="4"></circle>
               <path d="M12 2v2"></path>
@@ -196,16 +191,16 @@ const pageTitle = title ?? activeItem.label;
               <path d="m17.66 6.34 1.41-1.41"></path>
             </svg>
           </span>
-          <span class="admin-sidebar__theme-icon" data-theme-icon="moon" aria-hidden="true">
+          <span class="admin-sidebar__theme-icon hidden inline-flex w-4 h-4 [&_svg]:w-full [&_svg]:h-full" data-theme-icon="moon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
             </svg>
           </span>
-          <span class="admin-sidebar__theme-label" data-theme-label>Theme</span>
+          <span class="admin-sidebar__theme-label flex-1 text-left" data-theme-label>Theme</span>
         </button>
 
-        <div class="admin-sidebar__status" aria-hidden="true">
-          <span class="admin-sidebar__status-dot"></span>
+        <div class="admin-sidebar__status flex items-center gap-2 text-[0.75rem] text-[hsl(215_16%_47%)] px-3 dark:text-[hsl(215_20%_65%)]" aria-hidden="true">
+          <span class="admin-sidebar__status-dot w-2 h-2 rounded-full bg-[hsl(160_84%_50%)] shadow-[0_0_0_4px_hsl(160_84%_50%/0.15)]"></span>
           <span class="admin-sidebar__status-label">System online</span>
         </div>
       </div>
@@ -215,17 +210,17 @@ const pageTitle = title ?? activeItem.label;
   <!-- ====================================================================
        Backdrop (mobile only) - dims + blocks taps behind the sidebar.
        ==================================================================== -->
-  <div class="admin-sidebar-backdrop" data-admin-sidebar-backdrop aria-hidden="true"></div>
+  <div class="admin-sidebar-backdrop fixed inset-0 z-35 bg-[hsl(222_47%_4%/0.55)] backdrop-blur-[2px] opacity-0 pointer-events-none transition-opacity duration-200 max-lg:[&.is-visible]:opacity-100 max-lg:[&.is-visible]:pointer-events-auto" data-admin-sidebar-backdrop aria-hidden="true"></div>
 
   <!-- ====================================================================
        Main content area
        ==================================================================== -->
-  <div class="admin-main" data-admin-main>
-    <header class="admin-topbar">
-      <div class="admin-topbar__left">
+  <div class="admin-main lg:ml-64 min-h-screen flex flex-col bg-[hsl(var(--surface-0))]" data-admin-main>
+    <header class="admin-topbar sticky top-0 z-20 flex items-center justify-between gap-4 p-4 px-6 bg-[hsl(var(--surface-1)/0.7)] backdrop-blur-[14px] border-b border-[hsl(var(--surface-3)/0.7)]">
+      <div class="admin-topbar__left flex items-center gap-3 min-w-0">
         <button
           type="button"
-          class="admin-topbar__menu"
+          class="admin-topbar__menu hidden max-lg:inline-flex items-center justify-center w-10 h-10 rounded-[0.625rem] bg-[hsl(var(--surface-2)/0.7)] border border-[hsl(var(--surface-3))] text-[hsl(var(--foreground))] cursor-pointer transition-colors duration-150 hover:bg-[hsl(var(--surface-2))] [&_svg]:w-5 [&_svg]:h-5"
           data-action="toggle-sidebar"
           aria-label="Toggle sidebar"
           aria-controls="data-admin-sidebar"
@@ -237,451 +232,38 @@ const pageTitle = title ?? activeItem.label;
           </svg>
         </button>
 
-        <div class="admin-topbar__titles">
-          <p class="admin-topbar__eyebrow">SpotSync</p>
-          <h1 class="admin-topbar__title">{pageTitle}</h1>
-          {subtitle && <p class="admin-topbar__subtitle">{subtitle}</p>}
+        <div class="admin-topbar__titles min-w-0">
+          <p class="admin-topbar__eyebrow text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-[hsl(var(--text-muted))] mb-[0.1rem]">SpotSync</p>
+          <h1 class="admin-topbar__title font-display font-bold text-[1.25rem] tracking-[-0.01em] text-[hsl(var(--text-strong))] leading-[1.2] m-0">{pageTitle}</h1>
+          {subtitle && <p class="admin-topbar__subtitle mt-[0.2rem] text-[0.825rem] text-[hsl(var(--text-muted))]">{subtitle}</p>}
         </div>
       </div>
 
-      <div class="admin-topbar__right">
+      <div class="admin-topbar__right flex items-center gap-3">
         <span
-          class="admin-topbar__live"
+          class="admin-topbar__live inline-flex items-center gap-2 py-[0.35rem] px-3 rounded-full bg-[hsl(160_84%_39%/0.12)] border border-[hsl(160_84%_39%/0.3)] text-[hsl(160_84%_28%)] text-[0.7rem] font-bold uppercase tracking-[0.1em] dark:text-[hsl(160_84%_32%)]"
           data-admin-live
           aria-live="polite"
         >
-          <span class="admin-topbar__live-dot" aria-hidden="true"></span>
+          <span class="admin-topbar__live-dot w-[0.45rem] h-[0.45rem] rounded-full bg-[hsl(160_84%_50%)] animate-topbar-live-pulse" aria-hidden="true"></span>
           <span data-admin-live-label>Live</span>
         </span>
 
-        <div class="admin-topbar__user" data-admin-user>
-          <div class="admin-topbar__avatar" data-admin-user-avatar aria-hidden="true">A</div>
-          <div class="admin-topbar__user-meta">
-            <span class="admin-topbar__user-name" data-admin-user-name>Administrator</span>
-            <span class="admin-topbar__user-email" data-admin-user-email>admin@spotsync</span>
+        <div class="admin-topbar__user flex items-center gap-[0.625rem] py-[0.4rem] pr-[0.625rem] pl-[0.4rem] rounded-[0.625rem] bg-[hsl(var(--surface-2)/0.7)] border border-[hsl(var(--surface-3))] max-lg:p-1" data-admin-user>
+          <div class="admin-topbar__avatar w-8 h-8 rounded-full bg-[linear-gradient(135deg,hsl(160_84%_39%),hsl(217_91%_60%))] text-white inline-flex items-center justify-center font-bold text-[0.85rem]" data-admin-user-avatar aria-hidden="true">A</div>
+          <div class="admin-topbar__user-meta flex flex-col leading-[1.15] max-lg:hidden">
+            <span class="admin-topbar__user-name text-[0.8rem] font-semibold text-[hsl(var(--text-strong))]" data-admin-user-name>Administrator</span>
+            <span class="admin-topbar__user-email text-[0.7rem] text-[hsl(var(--text-muted))]" data-admin-user-email>admin@spotsync</span>
           </div>
         </div>
       </div>
     </header>
 
-    <main class="admin-content">
+    <main class="admin-content flex-1 p-6">
       <slot />
     </main>
   </div>
 </div>
-
-<style>
-  /* ==========================================================================
-     Admin layout shell
-     ============================================================================ */
-  .admin-shell {
-    @apply min-h-screen w-full;
-  }
-
-  /* ----- Sidebar --------------------------------------------------------- */
-  .admin-sidebar {
-    --sb-bg: hsl(222.2 47% 9% / 0.92);
-    --sb-border: hsl(217.2 32.6% 17.5% / 0.8);
-    --sb-text: hsl(210 40% 93%);
-    --sb-text-muted: hsl(215 20% 65%);
-    --sb-text-active: hsl(160 84% 70%);
-    --sb-active-bg: hsl(160 84% 39% / 0.12);
-    --sb-active-border: hsl(160 84% 39% / 0.4);
-
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 40;
-    width: 16rem;
-    height: 100vh;
-    background-color: var(--sb-bg);
-    backdrop-filter: blur(14px);
-    border-right: 1px solid var(--sb-border);
-    color: var(--sb-text);
-    transition: transform 250ms ease, width 250ms ease;
-  }
-
-  :root:not(.dark) .admin-sidebar {
-    --sb-bg: hsl(0 0% 100% / 0.92);
-    --sb-border: hsl(214 32% 88%);
-    --sb-text: hsl(222.2 47% 11%);
-    --sb-text-muted: hsl(215 16% 47%);
-    --sb-text-active: hsl(160 84% 30%);
-    --sb-active-bg: hsl(160 84% 92%);
-    --sb-active-border: hsl(160 84% 60%);
-  }
-
-  .admin-sidebar__inner {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    padding: 1.25rem 1rem;
-  }
-
-  /* Brand */
-  .admin-sidebar__brand {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    margin-bottom: 1.5rem;
-    border-radius: 0.75rem;
-    color: var(--sb-text);
-    transition: background-color 200ms ease;
-  }
-  .admin-sidebar__brand:hover {
-    background-color: hsl(0 0% 100% / 0.04);
-  }
-  :root:not(.dark) .admin-sidebar__brand:hover {
-    background-color: hsl(214 32% 92%);
-  }
-
-  .admin-sidebar__brand-mark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
-    border-radius: 0.625rem;
-    background: linear-gradient(135deg, hsl(160 84% 39%), hsl(160 84% 32%));
-    color: hsl(0 0% 100%);
-    box-shadow: 0 4px 12px hsl(160 84% 39% / 0.35);
-  }
-  .admin-sidebar__brand-icon {
-    width: 1.15rem;
-    height: 1.15rem;
-  }
-  .admin-sidebar__brand-text {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.1;
-  }
-  .admin-sidebar__brand-name {
-    font-family: "Outfit", "Inter", sans-serif;
-    font-weight: 700;
-    font-size: 1.05rem;
-    letter-spacing: -0.01em;
-  }
-  .admin-sidebar__brand-suffix {
-    font-size: 0.7rem;
-    color: var(--sb-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 500;
-    margin-top: 0.15rem;
-  }
-
-  /* Nav */
-  .admin-sidebar__nav {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-  }
-  .admin-sidebar__nav-list {
-    @apply flex flex-col gap-1;
-  }
-  .admin-sidebar__nav-link {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.625rem 0.75rem;
-    border-radius: 0.625rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--sb-text-muted);
-    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
-    border: 1px solid transparent;
-    text-decoration: none;
-  }
-  .admin-sidebar__nav-link:hover {
-    background-color: hsl(0 0% 100% / 0.04);
-    color: var(--sb-text);
-  }
-  :root:not(.dark) .admin-sidebar__nav-link:hover {
-    background-color: hsl(214 32% 92%);
-  }
-
-  .admin-sidebar__nav-link--active {
-    background-color: var(--sb-active-bg);
-    color: var(--sb-text-active);
-    border-color: var(--sb-active-border);
-    font-weight: 600;
-  }
-  .admin-sidebar__nav-link--active:hover {
-    background-color: var(--sb-active-bg);
-    color: var(--sb-text-active);
-  }
-
-  .admin-sidebar__nav-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.25rem;
-    height: 1.25rem;
-    flex-shrink: 0;
-  }
-  .admin-sidebar__nav-icon svg {
-    width: 100%;
-    height: 100%;
-  }
-  .admin-sidebar__nav-label {
-    flex: 1 1 auto;
-    line-height: 1.2;
-  }
-
-  /* Footer */
-  .admin-sidebar__footer {
-    display: flex;
-    flex-direction: column;
-    gap: 0.625rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--sb-border);
-  }
-  .admin-sidebar__theme-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.625rem;
-    background: transparent;
-    border: 1px solid var(--sb-border);
-    color: var(--sb-text);
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 150ms ease;
-    width: 100%;
-  }
-  .admin-sidebar__theme-toggle:hover {
-    background-color: hsl(0 0% 100% / 0.04);
-  }
-  :root:not(.dark) .admin-sidebar__theme-toggle:hover {
-    background-color: hsl(214 32% 92%);
-  }
-  .admin-sidebar__theme-icon {
-    display: inline-flex;
-    width: 1rem;
-    height: 1rem;
-  }
-  .admin-sidebar__theme-icon svg {
-    width: 100%;
-    height: 100%;
-  }
-  .admin-sidebar__theme-icon.hidden {
-    display: none;
-  }
-  .admin-sidebar__theme-label {
-    flex: 1 1 auto;
-    text-align: left;
-  }
-
-  .admin-sidebar__status {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.75rem;
-    color: var(--sb-text-muted);
-    padding: 0 0.75rem;
-  }
-  .admin-sidebar__status-dot {
-    width: 0.5rem;
-    height: 0.5rem;
-    border-radius: 9999px;
-    background-color: hsl(160 84% 50%);
-    box-shadow: 0 0 0 4px hsl(160 84% 50% / 0.15);
-  }
-
-  /* ----- Backdrop (mobile) ---------------------------------------------- */
-  .admin-sidebar-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 35;
-    background-color: hsl(222 47% 4% / 0.55);
-    backdrop-filter: blur(2px);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 200ms ease;
-  }
-  .admin-sidebar-backdrop.is-visible {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  /* ----- Main area ------------------------------------------------------- */
-  .admin-main {
-    margin-left: 16rem;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    background-color: hsl(var(--surface-0));
-  }
-
-  /* Topbar */
-  .admin-topbar {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem 1.5rem;
-    background-color: hsl(var(--surface-1) / 0.7);
-    backdrop-filter: blur(14px);
-    border-bottom: 1px solid hsl(var(--surface-3) / 0.7);
-  }
-  .admin-topbar__left {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    min-width: 0;
-  }
-  .admin-topbar__menu {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 0.625rem;
-    background-color: hsl(var(--surface-2) / 0.7);
-    border: 1px solid hsl(var(--surface-3));
-    color: hsl(var(--foreground));
-    cursor: pointer;
-    transition: background-color 150ms ease;
-  }
-  .admin-topbar__menu:hover {
-    background-color: hsl(var(--surface-2));
-  }
-  .admin-topbar__menu svg {
-    width: 1.25rem;
-    height: 1.25rem;
-  }
-
-  .admin-topbar__titles {
-    min-width: 0;
-  }
-  .admin-topbar__eyebrow {
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: hsl(var(--text-muted));
-    margin-bottom: 0.1rem;
-  }
-  .admin-topbar__title {
-    font-family: "Outfit", "Inter", sans-serif;
-    font-weight: 700;
-    font-size: 1.25rem;
-    letter-spacing: -0.01em;
-    color: hsl(var(--text-strong));
-    line-height: 1.2;
-    margin: 0;
-  }
-  .admin-topbar__subtitle {
-    margin-top: 0.2rem;
-    font-size: 0.825rem;
-    color: hsl(var(--text-muted));
-  }
-
-  .admin-topbar__right {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  .admin-topbar__live {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.75rem;
-    border-radius: 9999px;
-    background-color: hsl(160 84% 39% / 0.12);
-    border: 1px solid hsl(160 84% 39% / 0.3);
-    color: hsl(160 84% 32%);
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-  :root:not(.dark) .admin-topbar__live {
-    color: hsl(160 84% 28%);
-  }
-  .admin-topbar__live-dot {
-    width: 0.45rem;
-    height: 0.45rem;
-    border-radius: 9999px;
-    background-color: hsl(160 84% 50%);
-    animation: pulse 1.6s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.3); opacity: 0.6; }
-  }
-
-  .admin-topbar__user {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    padding: 0.4rem 0.625rem 0.4rem 0.4rem;
-    border-radius: 0.625rem;
-    background-color: hsl(var(--surface-2) / 0.7);
-    border: 1px solid hsl(var(--surface-3));
-  }
-  .admin-topbar__avatar {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 9999px;
-    background: linear-gradient(135deg, hsl(160 84% 39%), hsl(217 91% 60%));
-    color: white;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 0.85rem;
-  }
-  .admin-topbar__user-meta {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.15;
-  }
-  .admin-topbar__user-name {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: hsl(var(--text-strong));
-  }
-  .admin-topbar__user-email {
-    font-size: 0.7rem;
-    color: hsl(var(--text-muted));
-  }
-
-  /* Content */
-  .admin-content {
-    flex: 1 1 auto;
-    padding: 1.5rem;
-  }
-
-  /* ----- Responsive ------------------------------------------------------ */
-  @media (max-width: 1023.98px) {
-    .admin-sidebar {
-      transform: translateX(-100%);
-    }
-    .admin-sidebar.is-open {
-      transform: translateX(0);
-    }
-    .admin-main {
-      margin-left: 0;
-    }
-    .admin-topbar__menu {
-      display: inline-flex;
-    }
-    .admin-topbar__user-meta {
-      display: none;
-    }
-    .admin-topbar__user {
-      padding: 0.25rem;
-    }
-  }
-</style>
 
 <script>
   /**
@@ -695,8 +277,8 @@ const pageTitle = title ?? activeItem.label;
    *    persistent auth store.
    * 5. Listens for the "live" badge label updates from page scripts.
    */
-  import { $theme, applyTheme, toggleTheme, type Theme } from "../../store/themeStore";
   import { $user, isAdmin } from "../../store/authStore";
+import { $theme, applyTheme, toggleTheme, type Theme } from "../../store/themeStore";
 
   const sidebar = document.querySelector<HTMLElement>("[data-admin-sidebar]");
   const backdrop = document.querySelector<HTMLElement>("[data-admin-sidebar-backdrop]");

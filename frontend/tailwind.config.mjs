@@ -101,6 +101,18 @@ export default {
         'primary-submit-spin': {
           to: { transform: 'rotate(360deg)' },
         },
+        'admin-state-shimmer': {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
+        'kpi-shimmer': {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
+        'topbar-live-pulse': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+          '50%': { transform: 'scale(1.3)', opacity: '0.6' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -113,6 +125,9 @@ export default {
         'auth-orb-float-reverse': 'auth-orb-float 22s ease-in-out infinite reverse',
         'auth-dot-pulse': 'auth-dot-pulse 2s ease-in-out infinite',
         'primary-submit-spin': 'primary-submit-spin 0.8s linear infinite',
+        'admin-state-shimmer': 'admin-state-shimmer 1.4s ease-in-out infinite',
+        'kpi-shimmer': 'kpi-shimmer 1.4s ease-in-out infinite',
+        'topbar-live-pulse': 'topbar-live-pulse 1.6s ease-in-out infinite',
       },
       backdropBlur: {
         xs: '2px',

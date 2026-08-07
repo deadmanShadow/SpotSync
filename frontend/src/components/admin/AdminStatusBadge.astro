@@ -22,117 +22,61 @@ interface Props {
 
 const { status, label } = Astro.props as Props;
 
-const STATUS_MAP: Record<Status, { label: string; classes: string; dot: string }> = {
+const LABEL_MAP: Record<Status, string> = {
+  active: "Active",
+  completed: "Completed",
+  cancelled: "Cancelled",
+  driver: "Driver",
+  admin: "Admin",
+};
+
+const text = label ?? LABEL_MAP[status] ?? LABEL_MAP.cancelled;
+
+// Color tokens per status. Tailwind arbitrary values keep the exact HSL
+// colors from the original CSS. Light-mode colors are applied by default;
+// the dark-mode palette is applied via `dark:` variants.
+const STATUS_STYLES: Record<Status, { classes: string; dotClasses: string }> = {
   active: {
-    label: "Active",
-    classes: "admin-badge--emerald",
-    dot: "admin-badge__dot--emerald",
+    classes:
+      "text-[hsl(160_84%_25%)] bg-[hsl(160_84%_95%)] border-[hsl(160_84%_85%)] " +
+      "dark:text-[hsl(160_84%_70%)] dark:bg-[hsl(160_84%_39%/0.15)] dark:border-[hsl(160_84%_39%/0.35)]",
+    dotClasses: "bg-[hsl(160_84%_39%)]",
   },
   completed: {
-    label: "Completed",
-    classes: "admin-badge--blue",
-    dot: "admin-badge__dot--blue",
+    classes:
+      "text-[hsl(217_91%_35%)] bg-[hsl(217_91%_96%)] border-[hsl(217_91%_85%)] " +
+      "dark:text-[hsl(217_91%_75%)] dark:bg-[hsl(217_91%_60%/0.15)] dark:border-[hsl(217_91%_60%/0.35)]",
+    dotClasses: "bg-[hsl(217_91%_60%)]",
   },
   cancelled: {
-    label: "Cancelled",
-    classes: "admin-badge--slate",
-    dot: "admin-badge__dot--slate",
+    classes:
+      "text-[hsl(215_25%_27%)] bg-[hsl(215_16%_95%)] border-[hsl(215_16%_85%)] " +
+      "dark:text-[hsl(215_20%_75%)] dark:bg-[hsl(215_20%_25%/0.4)] dark:border-[hsl(215_20%_30%)]",
+    dotClasses: "bg-[hsl(215_16%_55%)]",
   },
   driver: {
-    label: "Driver",
-    classes: "admin-badge--blue",
-    dot: "admin-badge__dot--blue",
+    classes:
+      "text-[hsl(217_91%_35%)] bg-[hsl(217_91%_96%)] border-[hsl(217_91%_85%)] " +
+      "dark:text-[hsl(217_91%_75%)] dark:bg-[hsl(217_91%_60%/0.15)] dark:border-[hsl(217_91%_60%/0.35)]",
+    dotClasses: "bg-[hsl(217_91%_60%)]",
   },
   admin: {
-    label: "Admin",
-    classes: "admin-badge--emerald",
-    dot: "admin-badge__dot--emerald",
+    classes:
+      "text-[hsl(160_84%_25%)] bg-[hsl(160_84%_95%)] border-[hsl(160_84%_85%)] " +
+      "dark:text-[hsl(160_84%_70%)] dark:bg-[hsl(160_84%_39%/0.15)] dark:border-[hsl(160_84%_39%/0.35)]",
+    dotClasses: "bg-[hsl(160_84%_39%)]",
   },
 };
 
-const badge = STATUS_MAP[status] ?? STATUS_MAP.cancelled;
-const text = label ?? badge.label;
+const style = STATUS_STYLES[status] ?? STATUS_STYLES.cancelled;
 ---
 
-<span class:list={["admin-badge", badge.classes]}>
-  <span class:list={["admin-badge__dot", badge.dot]} aria-hidden="true"></span>
+<span
+  class:list={[
+    "admin-badge inline-flex items-center gap-[0.4rem] px-[0.65rem] py-[0.2rem] rounded-full text-[0.72rem] font-semibold leading-[1.4] border border-transparent whitespace-nowrap",
+    style.classes,
+  ]}
+>
+  <span class:list={["admin-badge__dot w-[0.4rem] h-[0.4rem] rounded-full shrink-0", style.dotClasses]} aria-hidden="true"></span>
   <span class="admin-badge__label">{text}</span>
 </span>
-
-<style>
-  .admin-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.2rem 0.65rem;
-    border-radius: 9999px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    line-height: 1.4;
-    border: 1px solid transparent;
-    white-space: nowrap;
-  }
-  .admin-badge__dot {
-    width: 0.4rem;
-    height: 0.4rem;
-    border-radius: 9999px;
-    flex-shrink: 0;
-  }
-
-  .admin-badge--emerald {
-    color: hsl(160 84% 28%);
-    background-color: hsl(160 84% 92%);
-    border-color: hsl(160 84% 80%);
-  }
-  :root:not(.dark) .admin-badge--emerald {
-    color: hsl(160 84% 25%);
-    background-color: hsl(160 84% 95%);
-    border-color: hsl(160 84% 85%);
-  }
-  .dark .admin-badge--emerald {
-    color: hsl(160 84% 70%);
-    background-color: hsl(160 84% 39% / 0.15);
-    border-color: hsl(160 84% 39% / 0.35);
-  }
-  .admin-badge__dot--emerald {
-    background-color: hsl(160 84% 39%);
-  }
-
-  .admin-badge--blue {
-    color: hsl(217 91% 38%);
-    background-color: hsl(217 91% 95%);
-    border-color: hsl(217 91% 85%);
-  }
-  :root:not(.dark) .admin-badge--blue {
-    color: hsl(217 91% 35%);
-    background-color: hsl(217 91% 96%);
-    border-color: hsl(217 91% 85%);
-  }
-  .dark .admin-badge--blue {
-    color: hsl(217 91% 75%);
-    background-color: hsl(217 91% 60% / 0.15);
-    border-color: hsl(217 91% 60% / 0.35);
-  }
-  .admin-badge__dot--blue {
-    background-color: hsl(217 91% 60%);
-  }
-
-  .admin-badge--slate {
-    color: hsl(215 25% 30%);
-    background-color: hsl(215 16% 94%);
-    border-color: hsl(215 16% 85%);
-  }
-  :root:not(.dark) .admin-badge--slate {
-    color: hsl(215 25% 27%);
-    background-color: hsl(215 16% 95%);
-    border-color: hsl(215 16% 85%);
-  }
-  .dark .admin-badge--slate {
-    color: hsl(215 20% 75%);
-    background-color: hsl(215 20% 25% / 0.4);
-    border-color: hsl(215 20% 30%);
-  }
-  .admin-badge__dot--slate {
-    background-color: hsl(215 16% 55%);
-  }
-</style>

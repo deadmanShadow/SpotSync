@@ -21,7 +21,7 @@
 
 <dialog
   data-reserve-modal
-  class="bg-transparent backdrop:bg-slate-950/70 backdrop:backdrop-blur-sm p-0 max-w-lg w-full"
+  class="bg-transparent backdrop:bg-slate-950/70 backdrop:backdrop-blur-sm p-0 m-auto max-w-lg w-full"
 >
   <div class="glass-card p-6 md:p-8 m-4 md:m-0 animate-fade-in">
     <!-- Header -->
@@ -45,7 +45,7 @@
         type="button"
         data-reserve-close
         aria-label="Close reservation dialog"
-        class="text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 rounded-lg p-2 transition-all"
+        class="text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 focus:outline-none rounded-lg p-2 transition-all"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true">
           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -130,17 +130,3 @@
   </div>
 </dialog>
 
-<style>
-  /* Ensure the native <dialog> is centered and styled consistently. */
-  dialog[data-reserve-modal] {
-    margin: auto;
-  }
-  dialog[data-reserve-modal]::backdrop {
-    background: rgba(2, 6, 23, 0.7);
-    backdrop-filter: blur(4px);
-  }
-  /* Hide default focus ring on close button (we add our own). */
-  dialog[data-reserve-modal] button:focus {
-    outline: none;
-  }
-</style>

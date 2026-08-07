@@ -35,42 +35,49 @@ const {
   dataKey,
 } = Astro.props as Props;
 
-const accentMap: Record<string, { bg: string; border: string; text: string; icon: string }> = {
+// Tailwind arbitrary-value classes per accent. The HSL values are preserved
+// exactly as in the original CSS so the visual appearance stays identical.
+const accentMap: Record<string, {
+  bgClass: string;
+  borderClass: string;
+  textClass: string;
+  iconClass: string;
+}> = {
   emerald: {
-    bg: "hsl(160 84% 39% / 0.08)",
-    border: "hsl(160 84% 39% / 0.25)",
-    text: "hsl(160 84% 32%)",
-    icon: "hsl(160 84% 39%)",
+    bgClass: "bg-[hsl(160_84%_39%/0.08)]",
+    borderClass: "border-[hsl(160_84%_39%/0.25)]",
+    textClass: "text-[hsl(160_84%_32%)]",
+    iconClass: "text-[hsl(160_84%_39%)]",
   },
   blue: {
-    bg: "hsl(217 91% 60% / 0.08)",
-    border: "hsl(217 91% 60% / 0.25)",
-    text: "hsl(217 91% 50%)",
-    icon: "hsl(217 91% 55%)",
+    bgClass: "bg-[hsl(217_91%_60%/0.08)]",
+    borderClass: "border-[hsl(217_91%_60%/0.25)]",
+    textClass: "text-[hsl(217_91%_50%)]",
+    iconClass: "text-[hsl(217_91%_55%)]",
   },
   purple: {
-    bg: "hsl(270 70% 60% / 0.08)",
-    border: "hsl(270 70% 60% / 0.25)",
-    text: "hsl(270 70% 50%)",
-    icon: "hsl(270 70% 55%)",
+    bgClass: "bg-[hsl(270_70%_60%/0.08)]",
+    borderClass: "border-[hsl(270_70%_60%/0.25)]",
+    textClass: "text-[hsl(270_70%_50%)]",
+    iconClass: "text-[hsl(270_70%_55%)]",
   },
   amber: {
-    bg: "hsl(38 92% 50% / 0.08)",
-    border: "hsl(38 92% 50% / 0.25)",
-    text: "hsl(38 92% 40%)",
-    icon: "hsl(38 92% 50%)",
+    bgClass: "bg-[hsl(38_92%_50%/0.08)]",
+    borderClass: "border-[hsl(38_92%_50%/0.25)]",
+    textClass: "text-[hsl(38_92%_40%)]",
+    iconClass: "text-[hsl(38_92%_50%)]",
   },
   rose: {
-    bg: "hsl(0 84% 60% / 0.08)",
-    border: "hsl(0 84% 60% / 0.25)",
-    text: "hsl(0 84% 45%)",
-    icon: "hsl(0 84% 55%)",
+    bgClass: "bg-[hsl(0_84%_60%/0.08)]",
+    borderClass: "border-[hsl(0_84%_60%/0.25)]",
+    textClass: "text-[hsl(0_84%_45%)]",
+    iconClass: "text-[hsl(0_84%_55%)]",
   },
   slate: {
-    bg: "hsl(215 20% 65% / 0.08)",
-    border: "hsl(215 20% 65% / 0.25)",
-    text: "hsl(215 25% 27%)",
-    icon: "hsl(215 16% 47%)",
+    bgClass: "bg-[hsl(215_20%_65%/0.08)]",
+    borderClass: "border-[hsl(215_20%_65%/0.25)]",
+    textClass: "text-[hsl(215_25%_27%)]",
+    iconClass: "text-[hsl(215_16%_47%)]",
   },
 };
 const a = accentMap[accent] ?? accentMap.emerald;
@@ -84,13 +91,15 @@ const deltaColor =
 ---
 
 <div
-  class="admin-kpi"
+  class:list={[
+    "admin-kpi flex flex-col gap-2 p-[1.1rem] px-[1.25rem] rounded-[0.875rem] bg-[hsl(var(--surface-1))] border border-[hsl(var(--surface-3))] shadow-[0_1px_2px_hsl(0_0%_0%/0.04)] transition-all duration-200 hover:-translate-y-px hover:shadow-[0_6px_24px_hsl(0_0%_0%/0.08)]",
+    a.borderClass,
+  ]}
   data-kpi-key={dataKey}
-  style={`--kpi-bg:${a.bg};--kpi-border:${a.border};--kpi-text:${a.text};--kpi-icon:${a.icon};`}
 >
-  <div class="admin-kpi__row">
-    <span class="admin-kpi__label">{label}</span>
-    <span class="admin-kpi__icon" aria-hidden="true">
+  <div class="admin-kpi__row flex items-center justify-between gap-2">
+    <span class:list={["admin-kpi__label text-[0.72rem] font-bold uppercase tracking-[0.08em]", a.textClass]}>{label}</span>
+    <span class:list={["admin-kpi__icon inline-flex items-center justify-center w-7 h-7 rounded-lg [&_svg]:w-4 [&_svg]:h-4", a.bgClass, a.iconClass]} aria-hidden="true">
       {icon === "users" && (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
       )}
@@ -129,110 +138,13 @@ const deltaColor =
       )}
     </span>
   </div>
-  <p class="admin-kpi__value" data-kpi-value={dataKey}>
-    <span class="admin-kpi__skeleton" aria-hidden="true"></span>
+  <p class="admin-kpi__value font-display font-bold text-[1.7rem] leading-[1.1] text-[hsl(var(--text-strong))] m-0 min-h-[1.85rem]" data-kpi-value={dataKey}>
+    <span class="admin-kpi__skeleton inline-block w-12 h-[1.4rem] rounded-[0.35rem] bg-[linear-gradient(90deg,hsl(var(--surface-2))_0%,hsl(var(--surface-3))_50%,hsl(var(--surface-2))_100%)] bg-[length:200%_100%] animate-kpi-shimmer" aria-hidden="true"></span>
   </p>
-  <div class="admin-kpi__footer">
-    {caption && <span class="admin-kpi__caption">{caption}</span>}
+  <div class="admin-kpi__footer flex items-center justify-between gap-2 flex-wrap min-h-[1.25rem]">
+    {caption && <span class="admin-kpi__caption text-[0.75rem] text-[hsl(var(--text-muted))]">{caption}</span>}
     {delta && (
-      <span class={`admin-kpi__delta ${deltaColor}`}>{delta}</span>
+      <span class:list={[`admin-kpi__delta inline-flex items-center px-2 py-[0.15rem] rounded-full border text-[0.7rem] font-semibold`, deltaColor]}>{delta}</span>
     )}
   </div>
 </div>
-
-<style>
-  .admin-kpi {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 1.1rem 1.25rem;
-    border-radius: 0.875rem;
-    background-color: hsl(var(--surface-1));
-    border: 1px solid hsl(var(--surface-3));
-    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.04);
-    transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
-  }
-  .admin-kpi:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 24px hsl(0 0% 0% / 0.08);
-    border-color: var(--kpi-border);
-  }
-
-  .admin-kpi__row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-  .admin-kpi__label {
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--kpi-text);
-  }
-  .admin-kpi__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    border-radius: 0.5rem;
-    background-color: var(--kpi-bg);
-    color: var(--kpi-icon);
-  }
-  .admin-kpi__icon svg {
-    width: 1rem;
-    height: 1rem;
-  }
-
-  .admin-kpi__value {
-    font-family: "Outfit", "Inter", sans-serif;
-    font-weight: 700;
-    font-size: 1.7rem;
-    line-height: 1.1;
-    color: hsl(var(--text-strong));
-    margin: 0;
-    min-height: 1.85rem;
-  }
-  .admin-kpi__skeleton {
-    display: inline-block;
-    width: 3rem;
-    height: 1.4rem;
-    border-radius: 0.35rem;
-    background: linear-gradient(
-      90deg,
-      hsl(var(--surface-2)) 0%,
-      hsl(var(--surface-3)) 50%,
-      hsl(var(--surface-2)) 100%
-    );
-    background-size: 200% 100%;
-    animation: kpi-shimmer 1.4s ease-in-out infinite;
-  }
-  @keyframes kpi-shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
-
-  .admin-kpi__footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    min-height: 1.25rem;
-  }
-  .admin-kpi__caption {
-    font-size: 0.75rem;
-    color: hsl(var(--text-muted));
-  }
-  .admin-kpi__delta {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.15rem 0.5rem;
-    border-radius: 9999px;
-    border: 1px solid;
-    font-size: 0.7rem;
-    font-weight: 600;
-  }
-</style>

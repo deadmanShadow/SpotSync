@@ -49,16 +49,15 @@ func Get() *echo.Echo {
 func build() {
 	// 1. Load configuration. On Vercel we never `log.Fatalf` because that
 	// would terminate the serverless instance before it can respond; we
-	// just log the failure and fall back to sensible defaults so the app
-	// still comes up.
+	// just log the failure and keep an empty Config so the app still
+	// answers /health for the load balancer. We deliberately do NOT
+	// hardcode any fallback secret here — any request that reaches the
+	// JWT middleware without a loaded config will be rejected.
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Printf("WARNING: Failed to load configuration: %v", err)
-		cfg = &config.Config{
-			Port:        "8080",
-			DatabaseURL: "",
-			JWTSecret:   "supersecretjwtkey",
-		}
+		log.Printf("ERROR: Failed to load configuration: %v", err)
+		log.Println("Server will boot in degraded mode: only /health will respond. JWT and DB endpoints will fail.")
+		cfg = &config.Config{}
 	}
 
 	// 2. Initialize Echo
@@ -82,12 +81,14 @@ func build() {
 	}
 
 	// Step 7 middleware: logging, panic recovery, and CORS so the frontend
-	// (any origin) can call the API with credentials and the standard
-	// Authorization / Content-Type headers.
+	// can call the API with credentials and the standard Authorization /
+	// Content-Type headers. Allowed origin is restricted to the Astro
+	// frontend URL loaded from FRONTEND_URL — never use "*" because browsers
+	// refuse to send credentials / Authorization headers with wildcard CORS.
 	e.Use(echomw.Logger())
 	e.Use(echomw.Recover())
 	e.Use(echomw.CORSWithConfig(echomw.CORSConfig{
-		AllowOrigins: []string{"*"},
+		AllowOrigins: []string{cfg.FrontendURL},
 		AllowHeaders: []string{
 			echo.HeaderOrigin,
 			echo.HeaderContentType,

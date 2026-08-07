@@ -18,6 +18,10 @@
 
 import type { ApiResponse } from "../types/api";
 
+// Base URL must be provided via the `PUBLIC_API_BASE_URL` env var at build
+// time (see frontend/.env.example). The localhost fallback exists only so
+// `astro dev` without a configured .env still runs against a local server;
+// production builds are expected to set the variable explicitly.
 const API_BASE_URL: string =
   import.meta.env.PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1";
 

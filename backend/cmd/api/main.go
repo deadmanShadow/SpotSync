@@ -24,8 +24,8 @@ func main() {
 	// Load config just for the port + graceful shutdown.
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Printf("WARNING: Failed to load configuration: %v", err)
-		cfg = &config.Config{Port: "8080"}
+		log.Printf("ERROR: Failed to load configuration: %v", err)
+		cfg = &config.Config{}
 	}
 
 	// 5. Start server with graceful shutdown

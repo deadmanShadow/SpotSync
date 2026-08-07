@@ -475,7 +475,7 @@ Navigate to `http://localhost:4321/my-reservations`. Active driver reservations 
 ## 📌 Step 8: Admin Dashboard (Zone Creation & Global System Monitor)
 
 ### 🎯 Objective
-Build the Admin Dashboard (`admin.astro`) containing analytical overview cards, a modal for creating new parking zones (`CreateZoneModal.astro`), and a full system reservations monitor table (`AdminReservationTable.astro`).
+Build the Admin Dashboard (`admin.astro`) containing analytical overview cards, a modal for creating new parking zones (`CreateZoneModal.astro`), and a full system reservations monitor table (`AdminReservationTable.astro`). The admin page should feature a good UI using Tailwind CSS and shadcn UI, not raw CSS (you can also use `global.css` if needed, but the core thing is using Tailwind and shadcn).
 
 ### 📋 Prerequisites
 - Step 7 completed.
@@ -505,6 +505,7 @@ Build the Admin Dashboard (`admin.astro`) containing analytical overview cards, 
    - Analytics Cards: Total Zones, System Active Bookings, Total EV Capacity.
    - Section 1: Parking Zone List + "Create Zone" trigger button.
    - Section 2: Global System Reservations Monitor Table.
+   - UI Design: Build a good UI using Tailwind CSS and shadcn UI instead of raw CSS (can also use `global.css` if needed, but core thing is using Tailwind CSS and shadcn).
 
 ### 💻 Execution Commands
 ```bash
@@ -553,7 +554,7 @@ npm run preview
 ## 📌 Step 10: Codebase Refactoring & Industry-Standard Code Quality Audit
 
 ### 🎯 Objective
-Audit and refactor the entire frontend codebase to clean up bloated or redundant ("garbage") code, enforce production-grade industry standards, eliminate magic numbers/strings, modularize oversized components, unify error handling and API services, ensure 100% strict TypeScript typing, and optimize bundle performance.
+Audit and refactor the entire frontend codebase to clean up bloated or redundant ("garbage") code, enforce production-grade industry standards, eliminate magic numbers/strings, modularize oversized components, unify error handling and API services, ensure 100% strict TypeScript typing, and optimize bundle performance. Do not remove any kind of code or logic. You can refactor the code into small components, which would be good, but do not remove any logic.
 
 ### 📋 Prerequisites
 - Step 9 completed.
@@ -597,7 +598,7 @@ Audit and refactor the entire frontend codebase to clean up bloated or redundant
    - Remove unused/dead parameters, redundant console logs, and temporary debugging code.
 
 4. **Component Modularization & De-bloating (`src/components/` & `src/pages/`)**
-   - Deconstruct monolithic pages into single-responsibility sub-components (e.g., separating heavy inline script logic into modular helper modules in `src/lib/`).
+   - Deconstruct monolithic pages into single-responsibility sub-components (e.g., separating heavy inline script logic into modular helper modules in `src/lib/`). You can refactor the code into small components, but do not remove any kind of code or business logic.
    - Remove unused Shadcn components or unused package imports to shrink bundle footprint.
    - Ensure clean HTML semantic structure and zero inline styling hacks.
 

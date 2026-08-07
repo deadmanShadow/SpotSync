@@ -2,23 +2,16 @@
 // Top navigation bar for SpotSync.
 //
 // Server-rendered shell with a fully reactive client-side script tag
-// at the bottom of this file that subscribes to the Nano Stores $user
-// atom. The script:
+// at the bottom of this file that subscribes to:
+//   1. The auth store (`$user`) for user/role/logout controls.
+//   2. The theme store (`$theme`) for the sun/moon toggle button.
 //
-//   1. Hydrates the visible user state from the persistent atom so the
-//      page renders correctly even after a full refresh.
-//   2. Re-renders the user/role/logout controls every time $user
-//      changes (login, logout, role switch).
-//   3. Wires the logout button to clearSession() and redirects to
-//      /login after wiping the session.
-//
-// For role-based links:
-//   - "Parking Zones" (/)            — visible to everyone.
-//   - "My Reservations" (/my-reservations) — visible to drivers and admins.
-//   - "Admin Dashboard" (/admin)     — visible only to admins.
-//
-// The data- attributes are the script's render hooks. They are stable
-// strings so the script can always find them after Astro hydrates.
+// Theme strategy:
+//   - The toggle is rendered server-side with a neutral label and a real
+//     visible icon that updates via the client script.
+//   - `applyTheme()` runs synchronously on every change so the
+//     `.dark` class flips on <html> instantly (no refresh required).
+//   - Persistence is handled by `themeStore` (localStorage).
 
 interface Props {
   /** Optional current pathname for marking the active link. */
@@ -61,8 +54,8 @@ const { pathname = Astro.url.pathname } = Astro.props;
         class:list={[
           "px-4 py-2 rounded-lg text-sm font-medium transition-all",
           pathname === "/"
-            ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
-            : "text-slate-300 hover:text-slate-100 hover:bg-slate-800/60",
+            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
+            : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800/60",
         ]}
       >
         Parking Zones
@@ -73,8 +66,8 @@ const { pathname = Astro.url.pathname } = Astro.props;
         class:list={[
           "px-4 py-2 rounded-lg text-sm font-medium transition-all",
           pathname === "/my-reservations"
-            ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
-            : "text-slate-300 hover:text-slate-100 hover:bg-slate-800/60",
+            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
+            : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800/60",
         ]}
       >
         My Reservations
@@ -85,31 +78,83 @@ const { pathname = Astro.url.pathname } = Astro.props;
         class:list={[
           "px-4 py-2 rounded-lg text-sm font-medium transition-all",
           pathname === "/admin"
-            ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
-            : "text-slate-300 hover:text-slate-100 hover:bg-slate-800/60",
+            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
+            : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800/60",
         ]}
       >
         Admin Dashboard
       </a>
     </div>
 
-    <!-- Right-side auth controls (re-rendered by client script) -->
-    <div class="flex items-center gap-2" data-auth-container>
-      <!-- Default SSR placeholder — overwritten by the client script on hydration. -->
-      <a
-        href="/login"
-        class="btn-ghost-glass text-sm"
-        data-auth-default
+    <!-- Right-side controls: theme toggle + auth (re-rendered by client script) -->
+    <div class="flex items-center gap-2">
+      <!-- Theme toggle button. The visible icon is swapped by the script
+           based on the current $theme value. -->
+      <button
+        type="button"
+        data-action="theme-toggle"
+        class="theme-toggle"
+        aria-label="Toggle dark / light theme"
+        title="Toggle theme"
       >
-        Sign In
-      </a>
-      <a
-        href="/register"
-        class="btn-neon text-sm"
-        data-auth-default
-      >
-        Register
-      </a>
+        <!-- Sun icon (visible in dark mode — clicking switches to light) -->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="w-5 h-5 hidden"
+          data-theme-icon="sun"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2"></path>
+          <path d="M12 20v2"></path>
+          <path d="m4.93 4.93 1.41 1.41"></path>
+          <path d="m17.66 17.66 1.41 1.41"></path>
+          <path d="M2 12h2"></path>
+          <path d="M20 12h2"></path>
+          <path d="m4.93 19.07 1.41-1.41"></path>
+          <path d="m17.66 6.34 1.41-1.41"></path>
+        </svg>
+        <!-- Moon icon (visible in light mode — clicking switches to dark) -->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="w-5 h-5 hidden"
+          data-theme-icon="moon"
+          aria-hidden="true"
+        >
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+        </svg>
+        <span class="sr-only" data-theme-label>Theme</span>
+      </button>
+
+      <div class="flex items-center gap-2" data-auth-container>
+        <!-- Default SSR placeholder — overwritten by the client script on hydration. -->
+        <a
+          href="/login"
+          class="btn-ghost-glass text-sm"
+          data-auth-default
+        >
+          Sign In
+        </a>
+        <a
+          href="/register"
+          class="btn-neon text-sm"
+          data-auth-default
+        >
+          Register
+        </a>
+      </div>
     </div>
   </nav>
 </header>
@@ -117,17 +162,56 @@ const { pathname = Astro.url.pathname } = Astro.props;
 <script>
   // Client-side hydration for the navbar.
   //
-  // We import the auth store at runtime so this script only runs in the
-  // browser. The store is persistent, so a refresh already has the user
-  // available; we just need to render the right controls.
-  import { $isAdmin, $isAuthenticated, $user, clearSession } from "../store/authStore";
-import type { User } from "../types/auth";
+  // We import the auth and theme stores at runtime so this script only
+  // runs in the browser. Both stores are persistent, so a refresh already
+  // has the user/theme available; we just need to render the right state.
 
-  // Build the HTML for the right-hand auth controls based on the current
-  // session state. Kept as a string template so the script can swap
-  // contents in a single DOM write without React on the page.
+  import { $isAdmin, $isAuthenticated, $user, clearSession } from "../store/authStore";
+  import {
+    $theme,
+    applyTheme,
+    toggleTheme,
+    type Theme,
+  } from "../store/themeStore";
+  import type { User } from "../types/auth";
+
+  // ============================================================================
+  // Theme toggle
+  // ============================================================================
+
+  /**
+   * Sync the visible icon (sun vs moon) with the current theme.
+   * The DOM markers `data-theme-icon` are stable strings so the function
+   * can be re-run safely after every theme change.
+   */
+  function paintThemeIcons(theme: Theme): void {
+    const sun = document.querySelector<HTMLElement>('[data-theme-icon="sun"]');
+    const moon = document.querySelector<HTMLElement>('[data-theme-icon="moon"]');
+    const label = document.querySelector<HTMLElement>("[data-theme-label]");
+    if (sun) sun.classList.toggle("hidden", theme !== "dark");
+    if (moon) moon.classList.toggle("hidden", theme !== "light");
+    if (label) {
+      label.textContent = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+    }
+  }
+
+  function bindThemeToggle(): void {
+    const button = document.querySelector<HTMLButtonElement>(
+      "[data-action='theme-toggle']",
+    );
+    if (!button) return;
+    button.addEventListener("click", () => {
+      const next = toggleTheme();
+      applyTheme(next);
+      paintThemeIcons(next);
+    });
+  }
+
+  // ============================================================================
+  // Auth controls
+  // ============================================================================
+
   function renderAuthControls(user: User | null): string {
-    // Signed out: Sign In + Register.
     if (!user) {
       return `
         <a href="/login" class="btn-ghost-glass text-sm">Sign In</a>
@@ -135,7 +219,6 @@ import type { User } from "../types/auth";
       `;
     }
 
-    // Signed in: avatar + name + role badge + logout.
     const initials = (user.name || user.email)
       .split(/\s+/)
       .map((part) => part.charAt(0).toUpperCase())
@@ -144,8 +227,8 @@ import type { User } from "../types/auth";
 
     const isAdminUser = user.role === "admin";
     const roleBadgeClass = isAdminUser
-      ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-      : "bg-blue-500/15 text-blue-300 border border-blue-500/30";
+      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
+      : "bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30";
     const roleBadgeLabel = isAdminUser ? "Admin" : "Driver";
 
     const safeName = escapeHtml(user.name);
@@ -153,13 +236,13 @@ import type { User } from "../types/auth";
 
     return `
       <div class="flex items-center gap-3">
-        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/40 border border-slate-700/50">
+        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-200/60 dark:bg-slate-800/40 border border-slate-300/60 dark:border-slate-700/50">
           <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
             ${escapeHtml(initials)}
           </div>
           <div class="flex flex-col leading-tight">
-            <span class="text-sm font-semibold text-slate-100">${safeName}</span>
-            <span class="text-xs text-slate-400">${safeEmail}</span>
+            <span class="text-sm font-semibold text-slate-900 dark:text-slate-100">${safeName}</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400">${safeEmail}</span>
           </div>
         </div>
         <span class="hidden md:inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${roleBadgeClass}">
@@ -168,7 +251,7 @@ import type { User } from "../types/auth";
         <button
           type="button"
           data-action="logout"
-          class="btn-ghost-glass text-sm hover:!bg-red-500/15 hover:!border-red-500/40 hover:!text-red-300"
+          class="btn-ghost-glass text-sm hover:!bg-red-500/15 hover:!border-red-500/40 hover:!text-red-600 dark:hover:!text-red-300"
           aria-label="Sign out"
         >
           Logout
@@ -177,8 +260,6 @@ import type { User } from "../types/auth";
     `;
   }
 
-  // Escape user-controlled strings before injecting into innerHTML.
-  // Critical for preventing XSS through the email/name fields.
   function escapeHtml(input: string): string {
     return input
       .replace(/&/g, "&amp;")
@@ -188,8 +269,6 @@ import type { User } from "../types/auth";
       .replace(/'/g, "&#39;");
   }
 
-  // Toggle the Admin Dashboard link visibility based on the current
-  // user role. Drivers never see the admin link.
   function syncAdminLinkVisibility(admin: boolean): void {
     const adminLink = document.querySelector<HTMLAnchorElement>(
       '[data-nav-link="admin"]',
@@ -198,9 +277,6 @@ import type { User } from "../types/auth";
     adminLink.classList.toggle("hidden", !admin);
   }
 
-  // Wire the freshly-rendered logout button (if any) to clear the
-  // session and redirect to /login. Uses event delegation so we
-  // don't have to rebind after every re-render.
   function bindLogoutDelegation(): void {
     const container = document.querySelector<HTMLDivElement>(
       "[data-auth-container]",
@@ -221,7 +297,6 @@ import type { User } from "../types/auth";
 
   function handleLogout(): void {
     clearSession();
-    // Show a friendly toast if the global helper is available.
     const w = window as unknown as {
       showToast?: (message: string, type?: string) => void;
     };
@@ -231,9 +306,7 @@ import type { User } from "../types/auth";
     window.location.href = "/login";
   }
 
-  // Read the current user from the persistent atom and paint the
-  // auth controls + admin link accordingly.
-  function paint(): void {
+  function paintAuth(): void {
     const container = document.querySelector<HTMLDivElement>(
       "[data-auth-container]",
     );
@@ -243,8 +316,6 @@ import type { User } from "../types/auth";
     container.innerHTML = renderAuthControls(user);
     syncAdminLinkVisibility($isAdmin.get());
 
-    // Keep the auth-only nav links consistent too: if signed out, hide
-    // My Reservations / Admin Dashboard entirely.
     const myResLink = document.querySelector<HTMLAnchorElement>(
       '[data-nav-link="my-reservations"]',
     );
@@ -253,20 +324,34 @@ import type { User } from "../types/auth";
     }
   }
 
-  // On first hydration: paint the current state.
-  // On every subsequent change to $user: re-paint.
-  // Nano Stores' listen returns an unsubscribe function we keep for
-  // possible cleanup (Astro will GC this script when the page unloads).
-  paint();
+  // ============================================================================
+  // Bootstrap
+  // ============================================================================
+
+  // Paint initial theme iconography. The `dark` class is already on <html>
+  // from the pre-paint script in Layout.astro, so we just sync the icon.
+  paintThemeIcons($theme.get());
+  bindThemeToggle();
+  // Re-paint when the theme changes (also reflects changes from other tabs).
+  $theme.listen((next) => {
+    applyTheme(next);
+    paintThemeIcons(next);
+  });
+  // React to cross-tab theme changes via the storage event.
+  window.addEventListener("storage", (event) => {
+    if (event.key === "spotsync_theme") {
+      applyTheme($theme.get());
+      paintThemeIcons($theme.get());
+    }
+  });
+
+  paintAuth();
   bindLogoutDelegation();
 
   $user.listen(() => {
-    paint();
+    paintAuth();
   });
 
-  // Quietly satisfy TS that we imported these — we only need their
-  // reactive values via .get(), but importing them wires the computed
-  // dependency graph so future listeners can subscribe if needed.
   void $isAuthenticated;
   void $isAdmin;
 </script>

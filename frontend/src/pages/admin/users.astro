@@ -8,7 +8,6 @@
 
 import Layout from "@/layouts/Layout.astro";
 import AdminSidebar from "@/components/admin/AdminSidebar.astro";
-import AdminGuard from "@/components/admin/AdminGuard.astro";
 import { UsersTable } from "@/components/admin/UsersTable";
 ---
 
@@ -16,12 +15,10 @@ import { UsersTable } from "@/components/admin/UsersTable";
   title="Users — SpotSync Admin"
   description="Every registered user on SpotSync."
 >
-  <AdminGuard>
-    <AdminSidebar
-      title="Users"
-      subtitle="Every registered user on SpotSync — drivers and administrators."
-    >
-      <UsersTable client:only="react" />
-    </AdminSidebar>
-  </AdminGuard>
+  <AdminSidebar
+    title="Users"
+    subtitle="Every registered user on SpotSync — drivers and administrators."
+  >
+    <UsersTable client:only="react" />
+  </AdminSidebar>
 </Layout>

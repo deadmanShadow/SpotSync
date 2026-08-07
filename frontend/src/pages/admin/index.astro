@@ -8,7 +8,6 @@
 
 import Layout from "@/layouts/Layout.astro";
 import AdminSidebar from "@/components/admin/AdminSidebar.astro";
-import AdminGuard from "@/components/admin/AdminGuard.astro";
 import { OverviewDashboard } from "@/components/admin/OverviewDashboard";
 ---
 
@@ -16,12 +15,10 @@ import { OverviewDashboard } from "@/components/admin/OverviewDashboard";
   title="Admin Overview — SpotSync"
   description="A live snapshot of users, drivers, reservations, and parking availability."
 >
-  <AdminGuard>
-    <AdminSidebar
-      title="Overview"
-      subtitle="Live snapshot of users, drivers, reservations, and parking availability."
-    >
-      <OverviewDashboard client:only="react" />
-    </AdminSidebar>
-  </AdminGuard>
+  <AdminSidebar
+    title="Overview"
+    subtitle="Live snapshot of users, drivers, reservations, and parking availability."
+  >
+    <OverviewDashboard client:only="react" />
+  </AdminSidebar>
 </Layout>

@@ -54,17 +54,6 @@ const { pathname = Astro.url.pathname } = Astro.props;
     <!-- Center navigation links (role-aware) -->
     <div class="hidden md:flex items-center gap-1" data-nav-links>
       <a
-        href={ROUTES.HOME}
-        class:list={[
-          "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-          pathname === ROUTES.HOME
-            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
-            : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800/60",
-        ]}
-      >
-        Parking Zones
-      </a>
-      <a
         href={ROUTES.MY_RESERVATIONS}
         data-nav-link="my-reservations"
         class:list={[
@@ -184,12 +173,12 @@ const { pathname = Astro.url.pathname } = Astro.props;
   // keep the theme toggle and the role-aware nav links in sync.
 
   import { $isAdmin, $isAuthenticated } from "../store/authStore";
-  import {
-    $theme,
-    applyTheme,
-    toggleTheme,
-    type Theme,
-  } from "../store/themeStore";
+import {
+$theme,
+applyTheme,
+toggleTheme,
+type Theme,
+} from "../store/themeStore";
 
   // ============================================================================
   // Theme toggle

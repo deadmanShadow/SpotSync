@@ -12,7 +12,7 @@
  * injection, error translation) live in `api.ts`.
  */
 
-import { apiFetch } from "./api";
+import { API_ENDPOINTS } from "../lib/constants";
 import type {
   AuthResponse,
   LoginCredentials,
@@ -20,6 +20,7 @@ import type {
   RegisterPayload,
   User,
 } from "../types/auth";
+import { apiSendJson } from "./api";
 
 /**
  * Register a brand-new user account.
@@ -30,10 +31,7 @@ import type {
  * Throws `ApiError` on validation failure (400) or duplicate email (409).
  */
 export async function register(payload: RegisterPayload): Promise<AuthResponse> {
-  return apiFetch<AuthResponse>("/auth/register", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return apiSendJson<AuthResponse>(API_ENDPOINTS.AUTH_REGISTER, "POST", payload);
 }
 
 /**
@@ -43,10 +41,7 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
  * status 401 when the credentials are invalid.
  */
 export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
-  return apiFetch<AuthResponse>("/auth/login", {
-    method: "POST",
-    body: JSON.stringify(credentials),
-  });
+  return apiSendJson<AuthResponse>(API_ENDPOINTS.AUTH_LOGIN, "POST", credentials);
 }
 
 /**
@@ -61,8 +56,5 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
 export async function updateProfile(
   payload: ProfileUpdatePayload,
 ): Promise<User> {
-  return apiFetch<User>("/auth/me", {
-    method: "PATCH",
-    body: JSON.stringify(payload),
-  });
+  return apiSendJson<User>(API_ENDPOINTS.AUTH_ME, "PATCH", payload);
 }

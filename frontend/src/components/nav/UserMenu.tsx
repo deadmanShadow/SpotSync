@@ -10,10 +10,11 @@ import {
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { ROUTES, USER_ROLES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { initialsOf } from "@/lib/format";
 import { toast } from "@/lib/toast";
-import { clearSession, getToken, $user } from "@/store/authStore";
+import { clearSession, $user } from "@/store/authStore";
 import type { User, UserRole } from "@/types/auth";
 
 import { ProfileSettingsDialog } from "./ProfileSettingsDialog";
@@ -54,11 +55,11 @@ function useClickOutside(
 /* -------------------------------------------------------------------------- */
 
 function roleLabel(role: UserRole): string {
-  return role === "admin" ? "Admin" : "Driver";
+  return role === USER_ROLES.ADMIN ? "Admin" : "Driver";
 }
 
 function roleBadgeClass(role: UserRole): string {
-  return role === "admin"
+  return role === USER_ROLES.ADMIN
     ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
     : "border-blue-500/30 bg-blue-500/15 text-blue-300";
 }
@@ -132,7 +133,7 @@ export function UserMenu(props: UserMenuProps) {
     return (
       <div className="flex items-center gap-2">
         <a
-          href="/login"
+          href={ROUTES.LOGIN}
           className={cn(
             "inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white/70 px-4 text-sm font-medium text-slate-700 backdrop-blur-md transition-all",
             "hover:border-slate-400 hover:bg-white hover:text-slate-900",
@@ -143,7 +144,7 @@ export function UserMenu(props: UserMenuProps) {
           Sign In
         </a>
         <a
-          href="/register"
+          href={ROUTES.REGISTER}
           className={cn(
             "inline-flex h-9 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all",
             "hover:from-emerald-400 hover:to-emerald-500 hover:shadow-emerald-500/50",
@@ -169,7 +170,7 @@ export function UserMenu(props: UserMenuProps) {
     setMenuOpen(false);
     clearSession();
     toast.info("You have been signed out.");
-    window.location.href = "/login";
+    window.location.href = ROUTES.LOGIN;
   }
 
   return (
@@ -196,7 +197,7 @@ export function UserMenu(props: UserMenuProps) {
             <AvatarFallback
               className={cn(
                 "bg-gradient-to-br font-display text-sm font-semibold text-white",
-                user.role === "admin"
+                user.role === USER_ROLES.ADMIN
                   ? "from-emerald-500 to-blue-600"
                   : "from-blue-500 to-indigo-600",
               )}
@@ -241,7 +242,7 @@ export function UserMenu(props: UserMenuProps) {
                   <AvatarFallback
                     className={cn(
                       "bg-gradient-to-br font-display text-sm font-semibold text-white",
-                      user.role === "admin"
+                      user.role === USER_ROLES.ADMIN
                         ? "from-emerald-500 to-blue-600"
                         : "from-blue-500 to-indigo-600",
                     )}
@@ -275,7 +276,7 @@ export function UserMenu(props: UserMenuProps) {
                         roleBadgeClass(user.role),
                       )}
                     >
-                      {user.role === "admin" ? (
+                      {user.role === USER_ROLES.ADMIN ? (
                         <ShieldIcon className="h-3 w-3" />
                       ) : (
                         <UserIcon className="h-3 w-3" />
@@ -377,7 +378,6 @@ export function UserMenu(props: UserMenuProps) {
       {/* Tiny hidden marker so the legacy script in Navbar.astro can
           detect "the React island is mounted" and skip its duplicate
           auth rendering. Not strictly required at runtime. */}
-      {getToken() ? null : null}
       <span data-user-menu-mounted hidden />
     </>
   );

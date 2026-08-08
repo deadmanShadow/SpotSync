@@ -14,11 +14,12 @@
  *   on the status code and show a friendly toast.
  */
 
-import { apiFetch } from "./api";
+import { API_ENDPOINTS, RESERVATION_STATUS } from "../lib/constants";
 import type {
   CreateReservationPayload,
   Reservation,
 } from "../types/reservation";
+import { apiFetch, apiSendJson } from "./api";
 
 /**
  * Lock in a spot inside a zone for the currently authenticated driver.
@@ -33,10 +34,7 @@ import type {
 export async function createReservation(
   payload: CreateReservationPayload,
 ): Promise<Reservation> {
-  return apiFetch<Reservation>("/reservations", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return apiSendJson<Reservation>(API_ENDPOINTS.RESERVATIONS, "POST", payload);
 }
 
 /**
@@ -51,7 +49,7 @@ export async function createReservation(
  * 400 "Invalid reservation id".
  */
 export async function getMyReservations(): Promise<Reservation[]> {
-  return apiFetch<Reservation[]>("/reservations/mine", {
+  return apiFetch<Reservation[]>(API_ENDPOINTS.RESERVATIONS_MINE, {
     method: "GET",
   });
 }
@@ -62,7 +60,7 @@ export async function getMyReservations(): Promise<Reservation[]> {
  * Used by the admin "global system monitor" table.
  */
 export async function getAllReservations(): Promise<Reservation[]> {
-  return apiFetch<Reservation[]>("/reservations", {
+  return apiFetch<Reservation[]>(API_ENDPOINTS.RESERVATIONS, {
     method: "GET",
   });
 }
@@ -75,10 +73,11 @@ export async function getAllReservations(): Promise<Reservation[]> {
  * PATCH and validates the transition from "active".
  */
 export async function cancelReservation(id: number): Promise<Reservation> {
-  return apiFetch<Reservation>(`/reservations/${id}/status`, {
-    method: "PATCH",
-    body: JSON.stringify({ status: "cancelled" }),
-  });
+  return apiSendJson<Reservation>(
+    API_ENDPOINTS.RESERVATION_STATUS(id),
+    "PATCH",
+    { status: RESERVATION_STATUS.CANCELLED },
+  );
 }
 
 /**
@@ -89,7 +88,7 @@ export async function cancelReservation(id: number): Promise<Reservation> {
  * "Delete" action in the destructive confirm dialog.
  */
 export async function deleteReservation(id: number): Promise<void> {
-  await apiFetch<void>(`/reservations/${id}`, {
+  await apiFetch<void>(API_ENDPOINTS.RESERVATION_BY_ID(id), {
     method: "DELETE",
   });
 }

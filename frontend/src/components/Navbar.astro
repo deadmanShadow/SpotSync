@@ -15,6 +15,7 @@
 //   - Persistence is handled by `themeStore` (localStorage).
 
 import UserMenu from "./nav/UserMenu.tsx";
+import { ROUTES } from "../lib/constants";
 
 interface Props {
   /** Optional current pathname for marking the active link. */
@@ -27,7 +28,7 @@ const { pathname = Astro.url.pathname } = Astro.props;
 <header class="glass-nav sticky top-0 z-50 w-full">
   <nav class="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
     <!-- Brand logo -->
-    <a href="/" class="flex items-center gap-2 group" aria-label="SpotSync home">
+    <a href={ROUTES.HOME} class="flex items-center gap-2 group" aria-label="SpotSync home">
       <span
         class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:shadow-emerald-500/50 transition-all"
       >
@@ -53,10 +54,10 @@ const { pathname = Astro.url.pathname } = Astro.props;
     <!-- Center navigation links (role-aware) -->
     <div class="hidden md:flex items-center gap-1" data-nav-links>
       <a
-        href="/"
+        href={ROUTES.HOME}
         class:list={[
           "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-          pathname === "/"
+          pathname === ROUTES.HOME
             ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
             : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800/60",
         ]}
@@ -64,11 +65,11 @@ const { pathname = Astro.url.pathname } = Astro.props;
         Parking Zones
       </a>
       <a
-        href="/my-reservations"
+        href={ROUTES.MY_RESERVATIONS}
         data-nav-link="my-reservations"
         class:list={[
           "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-          pathname === "/my-reservations"
+          pathname === ROUTES.MY_RESERVATIONS
             ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
             : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800/60",
         ]}
@@ -76,11 +77,11 @@ const { pathname = Astro.url.pathname } = Astro.props;
         My Reservations
       </a>
       <a
-        href="/admin"
+        href={ROUTES.ADMIN}
         data-nav-link="admin"
         class:list={[
           "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-          pathname === "/admin"
+          pathname === ROUTES.ADMIN
             ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
             : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800/60",
         ]}
@@ -158,13 +159,13 @@ const { pathname = Astro.url.pathname } = Astro.props;
           class="flex items-center gap-2"
         >
           <a
-            href="/login"
+            href={ROUTES.LOGIN}
             class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-300 bg-white/70 px-4 text-sm font-medium text-slate-700 backdrop-blur-md transition-all hover:border-slate-400 hover:bg-white hover:text-slate-900 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800/60 dark:hover:text-slate-50"
           >
             Sign In
           </a>
           <a
-            href="/register"
+            href={ROUTES.REGISTER}
             class="inline-flex h-9 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all hover:from-emerald-400 hover:to-emerald-500 hover:shadow-emerald-500/50"
           >
             Register

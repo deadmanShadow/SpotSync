@@ -37,6 +37,7 @@ import {
   type AdminDataBundle,
 } from "@/services/adminData";
 import { formatRelativeTime, initialsOf } from "@/lib/format";
+import { capacityOccupancyPercent } from "@/lib/utils";
 import type { Reservation } from "@/types/reservation";
 import type { User } from "@/types/auth";
 
@@ -168,10 +169,7 @@ function buildTopZones(bundle: AdminDataBundle) {
   return [...bundle.zones]
     .map((z) => {
       const used = Math.max(0, z.total_capacity - z.available_spots);
-      const pct =
-        z.total_capacity === 0
-          ? 0
-          : Math.round((used / z.total_capacity) * 100);
+      const pct = capacityOccupancyPercent(z.total_capacity, z.available_spots);
       return {
         name: z.name.length > 18 ? `${z.name.slice(0, 18)}…` : z.name,
         type: z.type,

@@ -10,11 +10,12 @@
  * error translation) lives in `api.ts`. This file is purely contract.
  */
 
-import { apiFetch } from "./api";
+import { API_ENDPOINTS } from "../lib/constants";
 import type {
   CreateZonePayload,
   ParkingZone,
 } from "../types/zone";
+import { ApiError, apiFetch, apiSendJson } from "./api";
 
 /**
  * Fetch the full list of parking zones for the home-page catalog.
@@ -24,7 +25,7 @@ import type {
  * render dynamic capacity bars without any extra requests.
  */
 export async function getZones(): Promise<ParkingZone[]> {
-  return apiFetch<ParkingZone[]>("/zones", {
+  return apiFetch<ParkingZone[]>(API_ENDPOINTS.ZONES, {
     method: "GET",
   });
 }
@@ -37,16 +38,12 @@ export async function getZones(): Promise<ParkingZone[]> {
  */
 export async function getZoneById(id: number): Promise<ParkingZone | null> {
   try {
-    return await apiFetch<ParkingZone>(`/zones/${id}`, {
+    return await apiFetch<ParkingZone>(API_ENDPOINTS.ZONE_BY_ID(id), {
       method: "GET",
     });
   } catch (error) {
     // 404 -> "not found" is a normal flow for stale links; surface as null.
-    const status =
-      error && typeof error === "object" && "status" in error
-        ? (error as { status?: number }).status
-        : undefined;
-    if (status === 404) {
+    if (error instanceof ApiError && error.status === 404) {
       return null;
     }
     throw error;
@@ -64,10 +61,7 @@ export async function getZoneById(id: number): Promise<ParkingZone | null> {
 export async function createZone(
   payload: CreateZonePayload,
 ): Promise<ParkingZone> {
-  return apiFetch<ParkingZone>("/zones", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return apiSendJson<ParkingZone>(API_ENDPOINTS.ZONES, "POST", payload);
 }
 
 /**
@@ -76,7 +70,7 @@ export async function createZone(
  * if the zone does not exist (translated to ApiError by api.ts).
  */
 export async function deleteZone(id: number): Promise<void> {
-  await apiFetch<void>(`/zones/${id}`, {
+  await apiFetch<void>(API_ENDPOINTS.ZONE_BY_ID(id), {
     method: "DELETE",
   });
 }
@@ -89,8 +83,5 @@ export async function updateZone(
   id: number,
   payload: CreateZonePayload,
 ): Promise<ParkingZone> {
-  return apiFetch<ParkingZone>(`/zones/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
+  return apiSendJson<ParkingZone>(API_ENDPOINTS.ZONE_BY_ID(id), "PUT", payload);
 }

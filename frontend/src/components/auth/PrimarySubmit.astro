@@ -9,16 +9,13 @@
 interface Props {
   /** Button label shown by default. */
   label: string;
-  /** Label shown while the request is in flight. */
-  loadingLabel?: string;
   /** Optional leading icon. */
   icon?: "arrow-right" | "user-plus" | "log-in";
   /** Submit button id (useful for testing and as an aria target). */
   id?: string;
 }
 
-const { label, loadingLabel: _loadingLabel, icon = "arrow-right", id = "submit-button" } = Astro.props;
-void _loadingLabel; // Reserved for a future native loading label binding.
+const { label, icon = "arrow-right", id = "submit-button" } = Astro.props;
 ---
 
 <button

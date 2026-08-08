@@ -192,7 +192,7 @@ const { title = "SpotSync — Smart Parking & EV Charging", description = "SpotS
         toast.addEventListener("mouseenter", () => window.clearTimeout(timer));
       }
 
-      (window as unknown as { showToast: typeof showToast }).showToast = showToast;
+      window.showToast = showToast;
     </script>
   </body>
 </html>

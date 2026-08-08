@@ -9,8 +9,9 @@
  * error translation) lives in `api.ts`. This file is purely contract.
  */
 
-import { apiFetch } from "./api";
+import { API_ENDPOINTS } from "../lib/constants";
 import type { User, UserRole } from "../types/auth";
+import { apiFetch } from "./api";
 
 /**
  * Fetch every registered user in the system, newest-first.
@@ -19,7 +20,7 @@ import type { User, UserRole } from "../types/auth";
  * Returns the full `User[]` already unwrapped from the API envelope.
  */
 export async function getAllUsers(): Promise<User[]> {
-  return apiFetch<User[]>("/auth/users", {
+  return apiFetch<User[]>(API_ENDPOINTS.AUTH_USERS, {
     method: "GET",
   });
 }
@@ -32,7 +33,7 @@ export async function getAllUsers(): Promise<User[]> {
  */
 export async function countUsersByRole(role: UserRole): Promise<number> {
   const response = await apiFetch<{ count: number }>(
-    `/auth/users/count?role=${encodeURIComponent(role)}`,
+    `${API_ENDPOINTS.AUTH_USERS_COUNT}?role=${encodeURIComponent(role)}`,
     {
       method: "GET",
     },
@@ -46,7 +47,7 @@ export async function countUsersByRole(role: UserRole): Promise<number> {
  * if the user does not exist (translated to ApiError by api.ts).
  */
 export async function deleteUser(id: number): Promise<void> {
-  await apiFetch<void>(`/auth/users/${id}`, {
+  await apiFetch<void>(API_ENDPOINTS.AUTH_USER_BY_ID(id), {
     method: "DELETE",
   });
 }

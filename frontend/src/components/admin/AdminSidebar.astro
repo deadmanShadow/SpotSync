@@ -77,8 +77,6 @@ interface Props {
   title?: string;
   /** Optional subtitle for the page header. */
   subtitle?: string;
-  /** Optional header slot rendered to the right of the title. */
-  actions?: boolean;
 }
 
 const { title, subtitle } = Astro.props as Props;
@@ -257,12 +255,9 @@ const pageTitle = title ?? activeItem.label;
    * 2. Click-outside-to-close on mobile.
    * 3. Mirrors the theme toggle's behavior so the sidebar icon stays in
    *    sync with the navbar toggle.
-   * 4. Populates the topbar's user avatar / name / email from the
-   *    persistent auth store.
-   * 5. Listens for the "live" badge label updates from page scripts.
+   * 4. Listens for the "live" badge label updates from page scripts.
    */
-  import { $user, isAdmin } from "../../store/authStore";
-import { $theme, applyTheme, toggleTheme, type Theme } from "../../store/themeStore";
+  import { $theme, applyTheme, toggleTheme, type Theme } from "../../store/themeStore";
 
   const sidebar = document.querySelector<HTMLElement>("[data-admin-sidebar]");
   const backdrop = document.querySelector<HTMLElement>("[data-admin-sidebar-backdrop]");
@@ -319,28 +314,6 @@ import { $theme, applyTheme, toggleTheme, type Theme } from "../../store/themeSt
     applyTheme(next);
     paintThemeIcons(next);
   });
-
-  // Populate the topbar user info from the persistent auth store.
-  function paintUser(): void {
-    const user = $user.get();
-    if (!isAdmin() || !user) return;
-    const nameEl = document.querySelector<HTMLElement>("[data-admin-user-name]");
-    const emailEl = document.querySelector<HTMLElement>("[data-admin-user-email]");
-    const avatarEl = document.querySelector<HTMLElement>("[data-admin-user-avatar]");
-    if (!nameEl || !emailEl || !avatarEl) return;
-    nameEl.textContent = user.name || "Administrator";
-    emailEl.textContent = user.email;
-    const initials = (user.name || user.email)
-      .split(/\s+/)
-      .map((p) => p.charAt(0).toUpperCase())
-      .filter(Boolean)
-      .slice(0, 2)
-      .join("");
-    avatarEl.textContent = initials || "A";
-  }
-
-  paintUser();
-  $user.listen(paintUser);
 
   /**
    * Allow page scripts to update the "Live" badge label (e.g. to show

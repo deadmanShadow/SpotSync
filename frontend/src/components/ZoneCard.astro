@@ -14,6 +14,14 @@
 // button is wired up by the parent page's client script (uses data-zone-id
 // attributes so we don't need any per-zone script tag here).
 
+import {
+  CAPACITY_THRESHOLDS,
+  ZONE_TYPES,
+  ZONE_TYPE_BADGE,
+  ZONE_TYPE_ICONS,
+  ZONE_TYPE_LABELS,
+} from "../lib/constants";
+import { capacityFillPercent, formatPricePerHour } from "../lib/utils";
 import type { ParkingZone } from "../types/zone";
 
 interface Props {
@@ -29,7 +37,7 @@ const available = Math.max(0, zone.available_spots);
 const occupied = Math.max(0, total - available);
 
 // % of full, capped at [0, 100] so we never overflow the bar.
-const fillPercent = total === 0 ? 0 : Math.min(100, (available / total) * 100);
+const fillPercent = capacityFillPercent(total, available);
 
 // Color rules per the design spec.
 let barColor = "bg-emerald-500";
@@ -39,11 +47,11 @@ if (available <= 0) {
   barColor = "bg-red-500";
   barShadow = "shadow-red-500/40";
   statusLabel = "Full";
-} else if (fillPercent < 20) {
+} else if (fillPercent < CAPACITY_THRESHOLDS.LOW) {
   barColor = "bg-red-500";
   barShadow = "shadow-red-500/40";
   statusLabel = "Almost Full";
-} else if (fillPercent < 50) {
+} else if (fillPercent < CAPACITY_THRESHOLDS.MEDIUM) {
   barColor = "bg-amber-500";
   barShadow = "shadow-amber-500/40";
   statusLabel = "Filling Up";
@@ -57,26 +65,26 @@ type Badge = {
 };
 
 const TYPE_BADGES: Record<ParkingZone["type"], Badge> = {
-  ev_charging: {
-    icon: "zap",
-    label: "EV Charging",
-    classes: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
+  [ZONE_TYPES.EV_CHARGING]: {
+    icon: ZONE_TYPE_ICONS.ev_charging,
+    label: ZONE_TYPE_LABELS.ev_charging,
+    classes: ZONE_TYPE_BADGE.ev_charging,
   },
-  general: {
-    icon: "car",
-    label: "General",
-    classes: "bg-blue-500/10 text-blue-300 border-blue-500/30",
+  [ZONE_TYPES.GENERAL]: {
+    icon: ZONE_TYPE_ICONS.general,
+    label: ZONE_TYPE_LABELS.general,
+    classes: ZONE_TYPE_BADGE.general,
   },
-  covered: {
-    icon: "shield",
-    label: "Covered",
-    classes: "bg-purple-500/10 text-purple-300 border-purple-500/30",
+  [ZONE_TYPES.COVERED]: {
+    icon: ZONE_TYPE_ICONS.covered,
+    label: ZONE_TYPE_LABELS.covered,
+    classes: ZONE_TYPE_BADGE.covered,
   },
 };
 
-const badge = TYPE_BADGES[zone.type] ?? TYPE_BADGES.general;
+const badge = TYPE_BADGES[zone.type] ?? TYPE_BADGES[ZONE_TYPES.GENERAL];
 
-const priceFormatted = `$${zone.price_per_hour.toFixed(2)}/hr`;
+const priceFormatted = formatPricePerHour(zone.price_per_hour);
 const isFull = available <= 0;
 ---
 

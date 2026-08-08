@@ -21,6 +21,7 @@
 import { persistentAtom } from "@nanostores/persistent";
 import { computed, type ReadableAtom } from "nanostores";
 
+import { STORAGE_KEYS } from "../lib/constants";
 import { TOKEN_STORAGE_KEY } from "../services/api";
 import type { User } from "../types/auth";
 
@@ -54,7 +55,7 @@ export const $token = persistentAtom<string | null>(
  * returns `null` so a corrupt entry never crashes the app on boot.
  */
 export const $user = persistentAtom<User | null>(
-  "spotsync_user",
+  STORAGE_KEYS.USER,
   null,
   {
     encode: JSON.stringify,
@@ -132,7 +133,7 @@ export function updateUser(user: User): void {
 export function clearSession(): void {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(TOKEN_STORAGE_KEY);
-    window.localStorage.removeItem("spotsync_user");
+    window.localStorage.removeItem(STORAGE_KEYS.USER);
   }
   $token.set(null);
   $user.set(null);

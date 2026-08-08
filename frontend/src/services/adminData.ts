@@ -19,6 +19,7 @@
 import { getZones } from "./zoneService";
 import { getAllReservations } from "./reservationService";
 import { getAllUsers, countUsersByRole } from "./userService";
+import { RESERVATION_STATUS, USER_ROLES, ZONE_TYPES } from "../lib/constants";
 import type { ParkingZone } from "../types/zone";
 import type { Reservation } from "../types/reservation";
 import type { User } from "../types/auth";
@@ -44,8 +45,8 @@ export async function loadAdminData(): Promise<AdminDataBundle> {
       getZones(),
       getAllReservations(),
       getAllUsers(),
-      countUsersByRole("driver"),
-      countUsersByRole("admin"),
+      countUsersByRole(USER_ROLES.DRIVER),
+      countUsersByRole(USER_ROLES.ADMIN),
     ]);
 
   const zones: ParkingZone[] =
@@ -63,11 +64,11 @@ export async function loadAdminData(): Promise<AdminDataBundle> {
   const driverCount =
     driverResult.status === "fulfilled" && typeof driverResult.value === "number"
       ? driverResult.value
-      : users.filter((u) => u.role === "driver").length;
+      : users.filter((u) => u.role === USER_ROLES.DRIVER).length;
   const adminCount =
     adminResult.status === "fulfilled" && typeof adminResult.value === "number"
       ? adminResult.value
-      : users.filter((u) => u.role === "admin").length;
+      : users.filter((u) => u.role === USER_ROLES.ADMIN).length;
 
   return { zones, reservations, users, driverCount, adminCount };
 }
@@ -100,7 +101,7 @@ export interface DashboardKpis {
 export function computeKpis(bundle: AdminDataBundle): DashboardKpis {
   const { zones, reservations, users } = bundle;
   const totalZones = zones.length;
-  const evZones = zones.filter((z) => z.type === "ev_charging");
+  const evZones = zones.filter((z) => z.type === ZONE_TYPES.EV_CHARGING);
   const evCapacity = evZones.reduce((sum, z) => sum + Math.max(0, z.total_capacity), 0);
   const evAvailable = evZones.reduce((sum, z) => sum + Math.max(0, z.available_spots), 0);
 
@@ -111,16 +112,16 @@ export function computeKpis(bundle: AdminDataBundle): DashboardKpis {
     totalCapacity === 0 ? 0 : Math.round((totalReserved / totalCapacity) * 100);
 
   const totalReservations = reservations.length;
-  const activeReservations = reservations.filter((r) => r.status === "active").length;
-  const completedReservations = reservations.filter((r) => r.status === "completed").length;
-  const cancelledReservations = reservations.filter((r) => r.status === "cancelled").length;
+  const activeReservations = reservations.filter((r) => r.status === RESERVATION_STATUS.ACTIVE).length;
+  const completedReservations = reservations.filter((r) => r.status === RESERVATION_STATUS.COMPLETED).length;
+  const cancelledReservations = reservations.filter((r) => r.status === RESERVATION_STATUS.CANCELLED).length;
 
   const driversWithReservations = new Set(
     reservations.map((r) => r.user_id),
   ).size;
 
   const spotsCurrentlyReserved = reservations.filter(
-    (r) => r.status === "active",
+    (r) => r.status === RESERVATION_STATUS.ACTIVE,
   ).length;
 
   return {
@@ -179,7 +180,7 @@ export function aggregateDriverReservations(
       id: userId,
       name: list[0]?.user?.name ?? `Driver #${userId}`,
       email: list[0]?.user?.email ?? `user#${userId}`,
-      role: "driver",
+      role: USER_ROLES.DRIVER,
       created_at: "",
     };
 
@@ -190,9 +191,9 @@ export function aggregateDriverReservations(
     summaries.push({
       user,
       totalReservations: list.length,
-      activeReservations: list.filter((r) => r.status === "active").length,
-      completedReservations: list.filter((r) => r.status === "completed").length,
-      cancelledReservations: list.filter((r) => r.status === "cancelled").length,
+      activeReservations: list.filter((r) => r.status === RESERVATION_STATUS.ACTIVE).length,
+      completedReservations: list.filter((r) => r.status === RESERVATION_STATUS.COMPLETED).length,
+      cancelledReservations: list.filter((r) => r.status === RESERVATION_STATUS.CANCELLED).length,
       lastReservationAt: sorted[0]?.created_at ?? null,
       firstReservationAt: sorted[sorted.length - 1]?.created_at ?? null,
       reservations: sorted,

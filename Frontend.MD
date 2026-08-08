@@ -551,72 +551,1009 @@ npm run preview
 
 ---
 
-## 📌 Step 10: Codebase Refactoring & Industry-Standard Code Quality Audit
+### 📌 Step 10: Codebase Refactoring & Industry-Standard Code Quality Audit
 
-### 🎯 Objective
-Audit and refactor the entire frontend codebase to clean up bloated or redundant ("garbage") code, enforce production-grade industry standards, eliminate magic numbers/strings, modularize oversized components, unify error handling and API services, ensure 100% strict TypeScript typing, and optimize bundle performance. Do not remove any kind of code or logic. You can refactor the code into small components, which would be good, but do not remove any logic.
+## 🎯 Objective
 
-### 📋 Prerequisites
-- Step 9 completed.
+Perform a **behavior-preserving, production-grade refactoring and code quality audit** of the entire frontend codebase.
 
-### 📁 Files to Create / Modify
-- `frontend/src/lib/constants.ts` (NEW: Extract magic values, route constants, status color maps, configuration defaults)
-- `frontend/src/lib/utils.ts` (Centralized formatting utilities: currency, date formatting, capacity percentage calculation)
-- `frontend/src/services/api.ts` (Refactor repetitive fetch logic & standardize error mapping)
-- `frontend/src/services/` (`authService.ts`, `zoneService.ts`, `reservationService.ts` — refactor redundant logic)
-- `frontend/src/components/` (Extract bloated inline script blocks and monolithic templates into modular sub-components)
-- `frontend/src/pages/` (`index.astro`, `login.astro`, `register.astro`, `my-reservations.astro`, `admin.astro`)
+The goal is to mainly Industry Standard Code, improve code quality, maintainability, consistency, type safety, modularity, and bundle efficiency without changing existing application behavior.
 
-### 📝 Step Context & Implementation Details
+### 🔴 Critical Non-Negotiable Rule
 
-1. **Extraction of Constants & Eliminating Magic Values (`src/lib/constants.ts`)**
-   - Move all hardcoded fallback values, status strings (`'active'`, `'completed'`, `'cancelled'`), zone types (`'general'`, `'ev_charging'`, `'covered'`), and storage keys into immutable type-safe constant structures.
-   - Example:
-     ```typescript
-     export const STORAGE_KEYS = {
-       TOKEN: 'spotsync_token',
-       USER: 'spotsync_user',
-     } as const;
+> **This is a refactoring task, NOT a redesign or feature-development task.**
+>
+> Existing business logic, application behavior, API contracts, authentication behavior, validation rules, reservation logic, cancellation logic, zone availability logic, admin functionality, navigation flow, UI/UX, responsive behavior, and existing features **must remain unchanged**.
+>
+> You may restructure, rename, extract, consolidate, or reorganize code when it is behavior-preserving.
+>
+> **When uncertain, preserve the existing behavior rather than inventing, simplifying, or changing it.**
+>
+> Do not remove or alter business logic merely because it appears redundant.
 
-     export const ZONE_TYPES = {
-       GENERAL: 'general',
-       EV_CHARGING: 'ev_charging',
-       COVERED: 'covered',
-     } as const;
+---
 
-     export const CAPACITY_THRESHOLDS = {
-       HIGH: 50,
-       MEDIUM: 20,
-     } as const;
-     ```
+## 📋 Prerequisites
 
-2. **Unified Utility & Helper Functions (`src/lib/utils.ts`)**
-   - Centralize currency formatting (`formatCurrency`), date formatting (`formatDate`), and dynamic badge style generators to ensure DRY (Don't Repeat Yourself) code across all components.
+* Step 9 must be completed successfully.
+* Do not begin Step 10 if Step 9 is incomplete or currently failing verification.
 
-3. **API Client & Service Layer Cleanup (`src/services/`)**
-   - Remove boilerplate `fetch` try-catch repeats by enhancing `apiFetch<T>` helper to handle unified error transformation, network timeout resilience, and token refresh/authorization error delegation.
-   - Remove unused/dead parameters, redundant console logs, and temporary debugging code.
+---
 
-4. **Component Modularization & De-bloating (`src/components/` & `src/pages/`)**
-   - Deconstruct monolithic pages into single-responsibility sub-components (e.g., separating heavy inline script logic into modular helper modules in `src/lib/`). You can refactor the code into small components, but do not remove any kind of code or business logic.
-   - Remove unused Shadcn components or unused package imports to shrink bundle footprint.
-   - Ensure clean HTML semantic structure and zero inline styling hacks.
+# 📌 Step 10.1: Constants Extraction & Centralized Utility Helpers
 
-5. **Strict TypeScript & Anti-Pattern Elimination**
-   - Verify complete type coverage with zero `any` usage or forced `as unknown as T` assertions.
-   - Replace any duplicate interface definitions with imports from centralized domain types (`src/types/`).
+## 🎯 Objective
 
-### 💻 Execution Commands
+Extract repeated magic values, strings, route paths, status values, configuration defaults, and storage keys into centralized, immutable, type-safe constants.
+
+Centralize common formatting and calculation utilities to eliminate unnecessary duplication.
+
+---
+
+## 📁 Files to Create / Modify
+
+### Create
+
+* `frontend/src/lib/constants.ts`
+
+### Modify
+
+* `frontend/src/lib/utils.ts`
+
+---
+
+## 📝 Implementation Requirements
+
+### 1. Constants Extraction
+
+Move appropriate repeated values such as:
+
+* Storage keys
+* Route paths
+* Authentication-related constants
+* Reservation status values
+* Zone types
+* Capacity thresholds
+* Status color/badge mappings
+* Configuration defaults
+* Repeated fallback values
+
+into `src/lib/constants.ts`.
+
+Use immutable, type-safe structures.
+
+Example:
+
+```typescript
+export const STORAGE_KEYS = {
+  TOKEN: 'spotsync_token',
+  USER: 'spotsync_user',
+} as const;
+
+export const ZONE_TYPES = {
+  GENERAL: 'general',
+  EV_CHARGING: 'ev_charging',
+  COVERED: 'covered',
+} as const;
+
+export const CAPACITY_THRESHOLDS = {
+  HIGH: 50,
+  MEDIUM: 20,
+} as const;
+```
+
+### Important
+
+Do **not** blindly move every string or number into constants.
+
+Only extract values that are genuinely repeated, configuration-like, domain-specific, or meaningful magic values.
+
+Do not make simple HTML attributes, CSS values, loop counters, array indexes, or naturally self-explanatory local values unnecessarily abstract.
+
+---
+
+### 2. Utility Consolidation
+
+Centralize genuinely shared utility logic in:
+
+```text
+frontend/src/lib/utils.ts
+```
+
+including, where applicable:
+
+* `formatCurrency`
+* `formatDate`
+* capacity percentage calculation
+* status/badge formatting
+* other genuinely duplicated pure helper functions
+
+Utilities must:
+
+* Have explicit TypeScript types
+* Be deterministic and side-effect free where appropriate
+* Preserve the existing output format and behavior
+* Not introduce unnecessary abstractions
+
+Do not change formatting behavior merely for stylistic reasons.
+
+---
+
+## 💻 Verification
+
+Run:
+
+```bash
+cd frontend
+npx astro check
+```
+
+---
+
+## ✅ Step 10.1 Verification
+
+Confirm:
+
+* `src/lib/constants.ts` passes TypeScript checking.
+* `src/lib/utils.ts` passes TypeScript checking.
+* Existing pages/components use the centralized constants/utilities where appropriate.
+* No business logic or user-facing behavior has changed.
+* Existing formatting output remains unchanged.
+* No unnecessary abstraction was introduced.
+
+### ⛔ Stop Condition
+
+After Step 10.1 passes verification:
+
+**STOP. Do not continue to Step 10.2 automatically.**
+
+Report:
+
+1. Files created/modified
+2. Constants extracted
+3. Utilities created/refactored
+4. Verification result
+5. Any potential concerns
+
+---
+
+# 📌 Step 10.2: Service Layer Refactoring & Unified API Error Handling
+
+## 🎯 Objective
+
+Refactor the frontend API/service layer to reduce repetitive fetch logic, standardize error handling, improve resilience, and maintain strong typing.
+
+---
+
+## 📁 Files to Modify
+
+* `frontend/src/services/api.ts`
+* `frontend/src/services/authService.ts`
+* `frontend/src/services/zoneService.ts`
+* `frontend/src/services/reservationService.ts`
+
+---
+
+## 📝 Implementation Requirements
+
+### 1. API Client Cleanup
+
+Refactor `apiFetch<T>` to centralize genuinely repetitive concerns such as:
+
+* Request construction
+* Response parsing
+* HTTP error transformation
+* Network error handling
+* Timeout handling, where appropriate
+* Bearer-token handling/delegation
+
+### ⚠️ Authentication Safety Rule
+
+**Do not introduce a new authentication architecture.**
+
+Do not invent or implement a token-refresh mechanism unless an existing refresh-token flow is already present in the codebase.
+
+Preserve the current:
+
+* Login behavior
+* JWT behavior
+* Authorization headers
+* Token storage
+* Logout behavior
+* Authentication state
+* Backend API contract
+
+exactly as they currently work.
+
+If the current application has no refresh-token mechanism, do not create one as part of this refactor.
+
+---
+
+### 2. Error Handling
+
+Standardize error transformation without swallowing meaningful errors.
+
+Do not convert all errors into generic messages if the existing application relies on specific error information.
+
+Preserve existing user-facing error behavior unless the existing implementation is genuinely duplicated or inconsistent.
+
+---
+
+### 3. Domain Services
+
+Refactor:
+
+* `authService.ts`
+* `zoneService.ts`
+* `reservationService.ts`
+
+to remove unnecessary duplication while preserving their existing responsibilities and API contracts.
+
+Remove only code, imports, parameters, or dependencies that can be **conclusively proven unused**.
+
+Do not remove:
+
+* API calls
+* validation
+* fallback behavior
+* state transitions
+* error handling
+* reservation logic
+* authentication logic
+* business rules
+
+merely because they appear redundant.
+
+---
+
+### 4. Type Safety
+
+Service methods must have explicit, meaningful TypeScript types.
+
+Prefer the existing centralized domain/API types from:
+
+```text
+frontend/src/types/
+```
+
+Do not duplicate interfaces unnecessarily.
+
+Do not use:
+
+```typescript
+any
+```
+
+or unsafe:
+
+```typescript
+as unknown as T
+```
+
+to silence TypeScript errors.
+
+If a type problem is discovered, fix the underlying type definition or introduce a proper type guard where appropriate.
+
+---
+
+## 💻 Verification
+
+Run:
+
+```bash
+cd frontend
+npx astro check
+```
+
+---
+
+## ✅ Step 10.2 Verification
+
+Confirm:
+
+* Service methods are properly typed.
+* API responses use existing domain types where applicable.
+* Errors are not silently swallowed.
+* Authentication behavior remains unchanged.
+* API endpoints and request/response contracts remain unchanged.
+* Reservation behavior remains unchanged.
+* No new authentication architecture was introduced.
+* No unnecessary abstractions were introduced.
+
+### ⛔ Stop Condition
+
+After Step 10.2 passes:
+
+**STOP. Do not continue to Step 10.3 automatically.**
+
+Report the changes and verification results.
+
+---
+
+# 📌 Step 10.3: Component Modularization & Page De-bloating
+
+## 🎯 Objective
+
+Deconstruct oversized Astro pages into maintainable, single-responsibility components and helper modules while preserving **100% of the existing behavior and functionality**.
+
+---
+
+## 📁 Files / Directories
+
+### Pages
+
+* `frontend/src/pages/index.astro`
+* `frontend/src/pages/login.astro`
+* `frontend/src/pages/register.astro`
+* `frontend/src/pages/my-reservations.astro`
+* `frontend/src/pages/admin.astro`
+
+### Components
+
+* `frontend/src/components/`
+
+### Helpers
+
+* `frontend/src/lib/`
+
+---
+
+## 📝 Implementation Requirements
+
+### 1. Component Modularization
+
+Identify genuinely oversized or monolithic sections and extract them into appropriately named components.
+
+Possible extraction areas include:
+
+* Header/navigation
+* Authentication forms
+* Zone cards
+* Reservation cards
+* Admin dashboard sections
+* Tables
+* Statistics sections
+* Modals
+* Reusable UI sections
+* Repeated page structures
+
+Only extract components where doing so improves maintainability.
+
+Do not create dozens of tiny components unnecessarily.
+
+---
+
+### 2. Script Modularization
+
+Where pages contain large inline client-side scripts, extract genuinely reusable or logically independent logic into appropriate helper modules.
+
+Preserve:
+
+* Event listeners
+* DOM interactions
+* API calls
+* Validation
+* State management
+* Loading states
+* Error handling
+* Reservation behavior
+* Authentication behavior
+* Admin functionality
+
+exactly as before.
+
+---
+
+### 🔴 UI/UX Preservation Rule
+
+This is **not a redesign**.
+
+Do not intentionally change:
+
+* Layout
+* Colors
+* Typography
+* Spacing
+* Responsive behavior
+* Navigation
+* User flows
+* Component appearance
+* Existing interactions
+
+unless required to preserve behavior during extraction.
+
+Existing inline styles may be moved to appropriate CSS/classes when safe, but the resulting visual appearance must remain equivalent.
+
+Do not introduce a new design system as part of this task.
+
+---
+
+### 3. Unused Components / Dependencies
+
+Remove only imports, components, or dependencies that can be **conclusively proven unused**.
+
+Do not remove anything merely because it looks unnecessary.
+
+Do not remove business logic.
+
+---
+
+## 💻 Verification
+
+Run:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Manually verify all affected pages.
+
+
+# 🔥 Additional Requirement — Aggressive Page De-bloating & Component Modularization
+
+The current Astro pages under:
+
+frontend/src/pages/
+
+are significantly oversized.
+
+Some `.astro` files are approximately 800–900+ lines, and some exceed 1,500 lines.
+
+Examples include:
+
+- pages/index.astro
+- pages/login.astro
+- pages/register.astro
+- pages/my-reservations.astro
+- pages/admin.astro
+- pages/admin/*.astro
+
+This is NOT acceptable as production-grade frontend architecture.
+
+Your task is to carefully decompose these oversized pages into smaller, focused, single-responsibility components and helper modules.
+
+## 🎯 Primary Goal
+
+Reduce oversized page files substantially while preserving 100% of their current behavior.
+
+The page files should primarily be responsible for:
+
+- page-level composition
+- data/page initialization
+- high-level orchestration
+- rendering the appropriate components
+
+Large UI sections, repeated markup, complex client-side logic, and reusable functionality should NOT remain unnecessarily embedded inside a single `.astro` page.
+
+---
+
+# 🧱 Component Extraction Rules
+
+When an `.astro` page contains a large section of UI, extract it into a dedicated component.
+
+Examples:
+
+### index.astro
+
+Potential extractions:
+
+- Header
+- Navigation
+- HeroSection
+- ZoneCatalog
+- ZoneCard
+- ZoneFilters
+- SearchBar
+- AvailabilityIndicator
+- BookingModal
+- Footer
+
+Only create components when they represent a meaningful UI/logic boundary.
+
+DO NOT create absurdly tiny components such as:
+
+- Single `<div>`
+- Single `<span>`
+- Single button
+- One-line text wrappers
+
+The objective is meaningful modularization, NOT maximizing the number of files.
+
+---
+
+# 🔐 Authentication Pages
+
+For:
+
+- login.astro
+- register.astro
+
+Extract meaningful reusable sections such as:
+
+- AuthLayout
+- LoginForm
+- RegisterForm
+- FormField
+- PasswordField
+- AuthErrorMessage
+
+Only create shared components where they are genuinely reusable.
+
+Do not change:
+
+- validation
+- authentication behavior
+- API calls
+- error messages
+- redirects
+- token handling
+- loading states
+- form submission behavior
+
+---
+
+# 📅 Reservation Pages
+
+For:
+
+- my-reservations.astro
+
+Consider extracting:
+
+- ReservationList
+- ReservationCard
+- ReservationStatusBadge
+- ReservationDetails
+- CancellationModal
+- EmptyReservationsState
+- LoadingState
+
+Preserve all existing reservation behavior exactly.
+
+Do NOT change:
+
+- cancellation logic
+- reservation status handling
+- API requests
+- error handling
+- date/time formatting
+- user interaction
+- loading behavior
+
+---
+
+# 👑 Admin Pages
+
+For:
+
+frontend/src/pages/admin/*.astro
+
+and:
+
+frontend/src/pages/admin.astro
+
+carefully decompose large dashboard sections.
+
+Potential component boundaries include:
+
+- AdminLayout
+- AdminSidebar
+- AdminHeader
+- DashboardStats
+- DriverBookingStats
+- UserTable
+- DriverTable
+- ReservationTable
+- ZoneTable
+- ZoneAvailability
+- BookingMonitor
+- UserDetails
+- ReservationDetails
+- AdminModal
+- ConfirmationModal
+
+Again, these are examples, NOT mandatory components.
+
+Analyze the actual code first and choose sensible boundaries.
+
+---
+
+# 🧠 Client-Side Script Decomposition
+
+A major concern is large inline:
+
+<script>
+
+sections inside `.astro` pages.
+
+If a page contains hundreds of lines of client-side JavaScript, do NOT simply leave that logic inside the page after extracting the HTML.
+
+Identify logically independent client-side functionality and move it into appropriate modules under:
+
+frontend/src/lib/
+
+or another appropriate existing frontend architecture location.
+
+Examples:
+
+- authentication form logic
+- reservation interactions
+- modal handling
+- filtering
+- sorting
+- pagination
+- API interaction orchestration
+- DOM event handling
+- validation helpers
+
+However:
+
+⚠️ Do NOT blindly move every function into a utility file.
+
+A helper should contain genuinely reusable/pure functionality.
+
+Page-specific orchestration should remain close to the relevant component/page.
+
+---
+
+# 📏 Target Page Size
+
+Do NOT treat line count as the only metric, but use it as a strong warning signal.
+
+A page containing 800–1500+ lines should normally be decomposed substantially.
+
+After refactoring, aim for pages that are approximately:
+
+- 100–300 lines where practical
+- occasionally larger if the page genuinely requires it
+
+Do NOT artificially force a page below a specific number of lines if doing so creates bad abstractions.
+
+Quality and responsibility boundaries are more important than an arbitrary LOC target.
+
+---
+
+# 🏗️ Preferred Architecture
+
+Prefer a structure similar to:
+
+frontend/src/
+
+├── components/
+│   ├── layout/
+│   ├── auth/
+│   ├── zones/
+│   ├── reservations/
+│   ├── admin/
+│   └── common/
+│
+├── lib/
+│   ├── constants.ts
+│   ├── utils.ts
+│   └── ...
+│
+├── services/
+│   ├── api.ts
+│   ├── authService.ts
+│   ├── zoneService.ts
+│   └── reservationService.ts
+│
+├── pages/
+│   ├── index.astro
+│   ├── login.astro
+│   ├── register.astro
+│   ├── my-reservations.astro
+│   ├── admin.astro
+│   └── admin/
+│       ├── drivers.astro
+│       ├── users.astro
+│       ├── reservations.astro
+│       └── zones.astro
+│
+└── types/
+
+Adapt this structure to the existing project instead of blindly creating folders.
+
+---
+
+# ⚠️ CRITICAL: DO NOT TURN THIS INTO A REDESIGN
+
+Component extraction MUST NOT change:
+
+- visual appearance
+- layout
+- spacing
+- typography
+- colors
+- responsive behavior
+- animations
+- navigation
+- interaction behavior
+- form behavior
+- modal behavior
+- loading states
+- error states
+
+The extracted component must render the same UI as before.
+
+This is a structural refactor, not a UI redesign.
+
+---
+
+# ⚠️ CRITICAL: DO NOT LOSE LOGIC
+
+Before extracting a section, understand ALL of its:
+
+- props
+- state
+- event listeners
+- API calls
+- DOM queries
+- DOM mutations
+- validation
+- error handling
+- loading states
+- conditional rendering
+- authentication checks
+- localStorage/sessionStorage usage
+- custom events
+- form submission behavior
+
+Nothing may be lost during extraction.
+
+If a function is referenced indirectly by:
+
+- event listeners
+- HTML attributes
+- DOM selectors
+- custom events
+- Astro client scripts
+- dynamic behavior
+
+treat it as USED.
+
+---
+
+# 🔍 Before Refactoring
+
+First inspect the complete source code.
+
+Create an internal map of:
+
+1. Each oversized page
+2. Major UI sections
+3. Client-side scripts
+4. API calls
+5. State variables
+6. Event listeners
+7. DOM dependencies
+8. Shared logic
+9. Repeated UI
+10. Existing component opportunities
+
+Do NOT start extracting components blindly.
+
+---
+
+# 🛑 Do Not Over-Abstract
+
+Avoid architectures such as:
+
+```text
+ButtonWrapper
+TextWrapper
+ContainerWrapper
+SectionWrapper
+CardWrapper
+IconWrapper
+
+
+ 
+
+
+---
+
+## ✅ Step 10.3 Verification
+
+Confirm that:
+
+* All pages load successfully.
+* UI appearance remains equivalent.
+* Existing user flows remain unchanged.
+* Authentication works.
+* Zone catalog browsing works.
+* Reservation creation works.
+* Reservation cancellation works.
+* Admin functionality works.
+* Responsive behavior remains intact.
+* Extracted components behave exactly as before.
+* No API contract was changed.
+* No business logic was removed.
+
+### ⛔ Stop Condition
+
+After Step 10.3 verification:
+
+**STOP. Do not continue to Step 10.4 automatically.**
+
+Report the files changed and verification results.
+
+---
+
+# 📌 Step 10.4: Strict TypeScript Audit & Production Bundle Verification
+
+## 🎯 Objective
+
+Perform a final code quality audit across the entire frontend source tree and verify the production build.
+
+---
+
+## 📁 Files to Audit
+
+```text
+frontend/src/
+```
+
+---
+
+## 📝 Implementation Requirements
+
+### 1. TypeScript Audit
+
+Audit all:
+
+```text
+.ts
+.tsx
+.astro
+```
+
+files.
+
+Ensure:
+
+* No unnecessary `any`
+* No unsafe `as unknown as T`
+* No duplicated domain interfaces
+* Proper imports from `src/types/`
+* Explicit types where inference is insufficient
+* Proper type guards where required
+
+### Important
+
+Do not blindly remove every TypeScript assertion.
+
+A legitimate, safe assertion may be retained when TypeScript cannot infer a DOM/framework type and the assertion is demonstrably correct.
+
+The goal is **type safety**, not artificially achieving zero `as` keywords.
+
+---
+
+### 2. Debugging Cleanup
+
+Remove only genuine debugging statements such as:
+
+```typescript
+console.log(...)
+```
+
+Temporary debugging code should be removed where it is not part of required application behavior.
+
+Do not remove legitimate error reporting or intentional production logging solely because it uses `console`.
+
+---
+
+### 3. Dead Code Audit
+
+Remove only code that can be conclusively proven unreachable or unused.
+
+Do not classify code as dead merely because it is not directly referenced from an obvious location.
+
+Be especially careful with:
+
+* Astro scripts
+* Event handlers
+* dynamically referenced functions
+* browser-side code
+* route-related code
+* configuration
+* exported functions
+* framework conventions
+
+---
+
+### 4. Production Build Verification
+
+Run:
+
 ```bash
 cd frontend
 npx astro check
 npm run build
+npm run preview
 ```
 
-### ✅ Step 10 Verification Checklist
-- `npx astro check` passes with 0 errors and 0 warnings across all `.astro` and `.ts` files.
-- No remaining `console.log` statements, unused imports, or dead code across `src/`.
-- All magic values/strings consolidated into `src/lib/constants.ts`.
-- `npm run build` succeeds cleanly with optimal static bundle size.
-- End-to-end user workflows (authentication, zone catalog browsing, reservation locking, cancellation, and admin monitoring) run smoothly without runtime regressions.
+Verify that the production build completes successfully and the preview server starts correctly.
 
+---
+
+# ✅ Final Step 10 Verification Checklist
+
+Before declaring Step 10 complete, verify:
+
+### Type Safety
+
+* [ ] `npx astro check` passes with **0 errors**
+* [ ] `npx astro check` passes with **0 warnings**
+* [ ] No unnecessary `any`
+* [ ] No `as unknown as T`
+* [ ] No duplicated domain interfaces where centralized types already exist
+
+### Code Quality
+
+* [ ] Repeated magic values appropriately centralized
+* [ ] Shared utilities centralized
+* [ ] API logic appropriately centralized
+* [ ] Service responsibilities remain clear
+* [ ] Components are appropriately modular
+* [ ] No unnecessary abstractions introduced
+* [ ] No conclusively unused imports remain
+* [ ] No genuine debugging statements remain
+* [ ] No conclusively dead code remains
+
+### Behavior Preservation
+
+* [ ] Authentication works
+* [ ] Login/logout works
+* [ ] Zone catalog browsing works
+* [ ] Zone availability behavior remains unchanged
+* [ ] Reservation creation works
+* [ ] Reservation locking behavior remains unchanged
+* [ ] Reservation cancellation works
+* [ ] Admin monitoring works
+* [ ] Existing validation behavior remains unchanged
+* [ ] Existing API contracts remain unchanged
+* [ ] Existing navigation remains unchanged
+* [ ] Existing UI/UX remains visually and behaviorally equivalent
+
+### Production Build
+
+* [ ] `npm run build` succeeds
+* [ ] `npm run preview` starts successfully
+* [ ] No build-time TypeScript/Astro errors
+* [ ] No runtime regressions discovered
+
+---
+
+# 🔴 Global Rules — Apply to Every Step
+
+1. **Behavior-preserving refactor only.**
+2. **Do not redesign the application.**
+3. **Do not add new features.**
+4. **Do not change backend/API contracts.**
+5. **Do not change authentication architecture.**
+6. **Do not remove business logic.**
+7. **Do not remove code unless it is conclusively proven unused, unreachable, or redundant without behavioral impact.**
+8. **Do not use `any` to bypass typing problems.**
+9. **Do not use `as unknown as T` to bypass typing problems.**
+10. **Do not invent missing functionality.**
+11. **Do not change existing UI/UX intentionally.**
+12. **Prefer the smallest safe refactor that achieves the objective.**
+13. **When uncertain, preserve the existing implementation.**
+14. **After each Step 10.x, run its specified verification.**
+15. **After each Step 10.x passes, STOP and report the changes. Do not automatically continue to the next step.**
+16. **Do not modify files outside the required scope unless a dependency/type import makes it strictly necessary.**
+17. **If a requested refactor conflicts with existing application behavior, preserve the behavior and report the conflict instead of guessing.**
+
+---
+
+# 🎯 Completion Standard
+
+Step 10 is complete only when the frontend is cleaner, more modular, consistently typed, and easier to maintain **without changing the existing application's behavior or business logic**.
+
+A successful build alone is **not** sufficient proof of correctness.
+
+The final result must be both:
+
+**Code-quality improved + Existing behavior preserved.**

@@ -10,6 +10,7 @@ import AuthShell from "@/components/auth/AuthShell.astro";
 import AuthFormField from "@/components/auth/AuthFormField.astro";
 import DemoFill from "@/components/auth/DemoFill.astro";
 import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
+import { ROUTES } from "@/lib/constants";
 ---
 
 <Layout title="Sign In — SpotSync" description="Sign in to your SpotSync account to reserve parking and EV charging spots in real time.">
@@ -91,7 +92,6 @@ import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
 
       <PrimarySubmit
         label="Sign In"
-        loadingLabel="Signing in..."
         icon="arrow-right"
         id="login-submit"
       />
@@ -99,16 +99,17 @@ import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
 
     <p class="text-center text-[0.85rem] text-slate-600 dark:text-slate-400 mt-2 mb-0">
       Don't have an account?
-      <a href="/register" class="auth-link font-semibold text-emerald-600 no-underline transition-colors duration-150 hover:text-emerald-500 hover:underline hover:underline-offset-[3px] dark:text-emerald-400 dark:hover:text-emerald-300">Create one for free</a>
+      <a href={ROUTES.REGISTER} class="auth-link font-semibold text-emerald-600 no-underline transition-colors duration-150 hover:text-emerald-500 hover:underline hover:underline-offset-[3px] dark:text-emerald-400 dark:hover:text-emerald-300">Create one for free</a>
     </p>
   </AuthShell>
 </Layout>
 
 <script>
+  import { DEMO_ACCOUNTS, ROUTES, USER_ROLES } from "../lib/constants";
+  import { toast } from "../lib/toast";
   import { ApiError } from "../services/api";
   import { login } from "../services/authService";
   import { setSession } from "../store/authStore";
-  import { toast } from "../lib/toast";
 
   /* ---------- One-shot cross-page notice ----------------------------- */
   // If the user just registered, /register stored a success notice here.
@@ -120,9 +121,11 @@ import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
   }
 
   /* ---------- Demo credentials ---------------------------------------- */
-  const DEMO_ACCOUNTS = {
-    driver: { email: "john@spotsync.com", password: "password123" },
-    admin: { email: "admin@spotsync.com", password: "adminpassword" },
+  // Sourced from the centralized DEMO_ACCOUNTS constant so the visible
+  // labels in `DemoFill.astro` and these submit values never drift apart.
+  const DEMO_BY_ROLE = {
+    [USER_ROLES.DRIVER]: DEMO_ACCOUNTS.DRIVER,
+    [USER_ROLES.ADMIN]: DEMO_ACCOUNTS.ADMIN,
   } as const;
 
   /* ---------- DOM lookups --------------------------------------------- */
@@ -171,9 +174,9 @@ import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
   /* ---------- Quick-fill demo buttons -------------------------------- */
   document.querySelectorAll<HTMLButtonElement>("[data-fill]").forEach((button) => {
     button.addEventListener("click", () => {
-      const role = button.dataset.fill as "driver" | "admin" | undefined;
+      const role = button.dataset.fill as keyof typeof DEMO_BY_ROLE | undefined;
       if (!role) return;
-      const account = DEMO_ACCOUNTS[role];
+      const account = DEMO_BY_ROLE[role];
       emailInput.value = account.email;
       passwordInput.value = account.password;
       hideError();
@@ -236,11 +239,11 @@ import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
       toast.success(`Welcome back, ${response.user.name}!`);
 
       // Send admins to the admin console and drivers to the home page.
-      const isAdmin = response.user.role === "admin";
+      const isAdmin = response.user.role === USER_ROLES.ADMIN;
       if (isAdmin) {
         toast.success(`Signed in as admin. Welcome to the SpotSync console.`);
       }
-      window.location.href = isAdmin ? "/admin" : "/";
+      window.location.href = isAdmin ? ROUTES.ADMIN : ROUTES.HOME;
     } catch (err) {
       setLoading(false);
       showError(friendlyError(err));

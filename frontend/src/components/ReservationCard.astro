@@ -20,6 +20,15 @@
 // wired up by the parent page's client script (event delegation keyed
 // off `data-cancel-reservation`) so we don't need a per-card <script>.
 
+import {
+  RESERVATION_STATUS,
+  RESERVATION_STATUS_BADGE,
+  RESERVATION_STATUS_LABELS,
+  ZONE_TYPES,
+  ZONE_TYPE_CHIP,
+  ZONE_TYPE_LABELS,
+} from "../lib/constants";
+import { isActiveReservationStatus } from "../lib/utils";
 import type { ParkingZone, ZoneType } from "../types/zone";
 import type { Reservation } from "../types/reservation";
 
@@ -34,7 +43,7 @@ const { reservation } = Astro.props;
 // card never renders undefined fields.
 const zone: ParkingZone | undefined = reservation.zone;
 const zoneName = zone?.name ?? `Zone #${reservation.zone_id}`;
-const zoneType: ZoneType = zone?.type ?? "general";
+const zoneType: ZoneType = zone?.type ?? ZONE_TYPES.GENERAL;
 
 // ISO timestamp from the backend. Stored as a data-attribute so the
 // client script can render a friendly relative-time label.
@@ -75,50 +84,28 @@ const licensePlate = (reservation.license_plate ?? "").trim();
 // Status badge config. "completed" is also possible (per the type
 // union); it gets a neutral blue treatment distinct from "cancelled".
 const status = reservation.status;
-const isActive = status === "active";
+const isActive = isActiveReservationStatus(status);
 
 const statusConfig = {
-  active: {
-    label: "Active",
-    pillClasses:
-      "bg-emerald-500/15 text-emerald-200 border-emerald-400/40 ring-1 ring-emerald-400/20",
-    dotClasses: "bg-emerald-400 shadow-emerald-400/70",
-    stripeGradient: "from-emerald-500 via-emerald-400 to-emerald-600",
-    stripeGlow: "shadow-emerald-500/50",
+  [RESERVATION_STATUS.ACTIVE]: {
+    label: RESERVATION_STATUS_LABELS.active,
+    ...RESERVATION_STATUS_BADGE.active,
   },
-  completed: {
-    label: "Completed",
-    pillClasses:
-      "bg-blue-500/15 text-blue-200 border-blue-400/30 ring-1 ring-blue-400/10",
-    dotClasses: "bg-blue-400 shadow-blue-400/60",
-    stripeGradient: "from-blue-500 via-blue-400 to-blue-600",
-    stripeGlow: "shadow-blue-500/40",
+  [RESERVATION_STATUS.COMPLETED]: {
+    label: RESERVATION_STATUS_LABELS.completed,
+    ...RESERVATION_STATUS_BADGE.completed,
   },
-  cancelled: {
-    label: "Cancelled",
-    pillClasses:
-      "bg-slate-700/40 text-slate-300 border-slate-500/40 ring-1 ring-slate-500/10",
-    dotClasses: "bg-slate-400 shadow-slate-400/40",
-    stripeGradient: "from-slate-600 via-slate-500 to-slate-700",
-    stripeGlow: "shadow-slate-500/30",
+  [RESERVATION_STATUS.CANCELLED]: {
+    label: RESERVATION_STATUS_LABELS.cancelled,
+    ...RESERVATION_STATUS_BADGE.cancelled,
   },
 } as const;
 
-const badge = statusConfig[status] ?? statusConfig.cancelled;
+const badge = statusConfig[status] ?? statusConfig[RESERVATION_STATUS.CANCELLED];
 
 // Zone-type icon config (matches ZoneCard.astro).
-const TYPE_LABELS: Record<ZoneType, string> = {
-  ev_charging: "EV Charging",
-  general: "General",
-  covered: "Covered",
-};
-const TYPE_CHIP: Record<ZoneType, string> = {
-  ev_charging: "bg-emerald-500/15 text-emerald-300 border-emerald-400/30",
-  general: "bg-blue-500/15 text-blue-300 border-blue-400/30",
-  covered: "bg-purple-500/15 text-purple-300 border-purple-400/30",
-};
-const typeLabel = TYPE_LABELS[zoneType];
-const chipClasses = TYPE_CHIP[zoneType];
+const typeLabel = ZONE_TYPE_LABELS[zoneType];
+const chipClasses = ZONE_TYPE_CHIP[zoneType];
 ---
 
 <article

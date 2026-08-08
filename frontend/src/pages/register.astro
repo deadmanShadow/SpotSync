@@ -10,6 +10,7 @@ import AuthShell from "@/components/auth/AuthShell.astro";
 import AuthFormField from "@/components/auth/AuthFormField.astro";
 import RoleSelector from "@/components/auth/RoleSelector.astro";
 import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
+import { ROUTES } from "@/lib/constants";
 ---
 
 <Layout title="Create Account — SpotSync" description="Create a SpotSync account to reserve parking and EV charging spots in real time.">
@@ -113,7 +114,6 @@ import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
 
         <PrimarySubmit
           label="Create Account"
-          loadingLabel="Creating account..."
           icon="user-plus"
           id="register-submit"
         />
@@ -122,12 +122,13 @@ import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
 
     <p class="text-center text-[0.85rem] text-slate-600 dark:text-slate-400 mt-2 mb-0">
       Already have an account?
-      <a href="/login" class="font-semibold text-emerald-600 no-underline transition-colors duration-150 hover:text-emerald-500 hover:underline hover:underline-offset-[3px] dark:text-emerald-400 dark:hover:text-emerald-300">Sign in instead</a>
+      <a href={ROUTES.LOGIN} class="font-semibold text-emerald-600 no-underline transition-colors duration-150 hover:text-emerald-500 hover:underline hover:underline-offset-[3px] dark:text-emerald-400 dark:hover:text-emerald-300">Sign in instead</a>
     </p>
   </AuthShell>
 </Layout>
 
 <script>
+  import { ROUTES, USER_ROLES } from "../lib/constants";
   import { ApiError } from "../services/api";
 import { register } from "../services/authService";
 import type { UserRole } from "../types/auth";
@@ -238,7 +239,7 @@ import type { UserRole } from "../types/auth";
     const name = nameInput.value.trim();
     const email = emailInput.value.trim();
     const password = passwordInput.value;
-    const role = (roleInput.value || "driver") as UserRole;
+    const role = (roleInput.value || USER_ROLES.DRIVER) as UserRole;
 
     if (!name || name.length < 2) {
       showError("Please enter your full name (at least 2 characters).");
@@ -269,7 +270,7 @@ import type { UserRole } from "../types/auth";
         "spotsync_auth_notice",
         "Account created! Please sign in to continue.",
       );
-      window.location.href = "/login";
+      window.location.href = ROUTES.LOGIN;
     } catch (err) {
       setLoading(false);
       showError(friendlyError(err));

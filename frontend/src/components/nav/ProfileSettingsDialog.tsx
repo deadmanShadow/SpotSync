@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { USER_ROLES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { initialsOf } from "@/lib/format";
 import { toast } from "@/lib/toast";
@@ -37,11 +38,11 @@ const NAME_MIN = 2;
 const NAME_MAX = 100;
 
 function roleLabel(role: UserRole): string {
-  return role === "admin" ? "Admin" : "Driver";
+  return role === USER_ROLES.ADMIN ? "Admin" : "Driver";
 }
 
 function roleBadgeClass(role: UserRole): string {
-  return role === "admin"
+  return role === USER_ROLES.ADMIN
     ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
     : "border-blue-500/30 bg-blue-500/15 text-blue-300";
 }
@@ -167,7 +168,7 @@ export function ProfileSettingsDialog(props: ProfileSettingsDialogProps) {
               aria-hidden="true"
               className={cn(
                 "pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full opacity-30 blur-3xl",
-                user.role === "admin"
+                user.role === USER_ROLES.ADMIN
                   ? "bg-emerald-500/40 dark:bg-emerald-500/30"
                   : "bg-blue-500/40 dark:bg-blue-500/30",
               )}
@@ -177,7 +178,7 @@ export function ProfileSettingsDialog(props: ProfileSettingsDialogProps) {
                 <AvatarFallback
                   className={cn(
                     "bg-gradient-to-br font-display text-base font-semibold text-white",
-                    user.role === "admin"
+                    user.role === USER_ROLES.ADMIN
                       ? "from-emerald-500 to-blue-600"
                       : "from-blue-500 to-indigo-600",
                   )}
@@ -212,7 +213,7 @@ export function ProfileSettingsDialog(props: ProfileSettingsDialogProps) {
                 label="Role"
                 value={roleLabel(user.role)}
                 icon={
-                  user.role === "admin" ? (
+                  user.role === USER_ROLES.ADMIN ? (
                     <ShieldIcon className="h-3.5 w-3.5" />
                   ) : (
                     <UserIcon className="h-3.5 w-3.5" />

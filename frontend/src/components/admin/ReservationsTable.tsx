@@ -394,7 +394,7 @@ export function ReservationsTable() {
                           </span>
                           <span className="text-xs text-slate-400">
                             {r.zone?.type
-                              ? ZONE_LABEL[r.zone.type as ZoneType]
+                              ? ZONE_LABEL[r.zone.type]
                               : "General"}
                           </span>
                         </div>

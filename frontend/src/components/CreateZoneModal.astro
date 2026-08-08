@@ -81,6 +81,7 @@
 </dialog>
 
 <script>
+  import { ROUTES, ZONE_TYPES } from "../lib/constants";
   import { ApiError } from "../services/api";
   import { createZone } from "../services/zoneService";
   import { toast } from "../lib/toast";
@@ -153,7 +154,11 @@
     const type = String(data.get("type") ?? "") as ZoneType;
     const totalCapacity = Number(data.get("total_capacity"));
     const pricePerHour = Number(data.get("price_per_hour"));
-    const validTypes: readonly ZoneType[] = ["general", "ev_charging", "covered"];
+    const validTypes: readonly ZoneType[] = [
+      ZONE_TYPES.GENERAL,
+      ZONE_TYPES.EV_CHARGING,
+      ZONE_TYPES.COVERED,
+    ];
 
     if (name.length < 2) {
       showError("Zone name must contain at least 2 characters.");
@@ -193,7 +198,7 @@
       showError(message);
       toast.error(message);
       if (error instanceof ApiError && error.status === 401) {
-        window.setTimeout(() => window.location.replace("/login"), 1000);
+        window.setTimeout(() => window.location.replace(ROUTES.LOGIN), 1000);
       }
     } finally {
       setLoading(false);

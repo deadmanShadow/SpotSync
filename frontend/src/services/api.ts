@@ -16,6 +16,7 @@
  * request lifecycle are explicit and easy to debug.
  */
 
+import { DEFAULT_API_BASE_URL, STORAGE_KEYS } from "../lib/constants";
 import type { ApiResponse } from "../types/api";
 
 // Base URL must be provided via the `PUBLIC_API_BASE_URL` env var at build
@@ -23,10 +24,10 @@ import type { ApiResponse } from "../types/api";
 // `astro dev` without a configured .env still runs against a local server;
 // production builds are expected to set the variable explicitly.
 const API_BASE_URL: string =
-  import.meta.env.PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1";
+  import.meta.env.PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL;
 
 /** LocalStorage key holding the JWT Bearer token written by authStore. */
-export const TOKEN_STORAGE_KEY = "spotsync_token";
+export const TOKEN_STORAGE_KEY = STORAGE_KEYS.TOKEN;
 
 /**
  * Custom error class carrying the HTTP status code and the backend's
@@ -61,6 +62,40 @@ function getAuthToken(): string | null {
 }
 
 /**
+ * Normalize `RequestInit.headers` into a plain `Record<string, string>`.
+ * The `HeadersInit` union accepts arrays, `Headers` instances, or
+ * plain records; this helper produces a uniform record we can merge
+ * without runtime guards at every call site.
+ */
+function normalizeHeaders(
+  init: RequestInit["headers"],
+): Record<string, string> | undefined {
+  if (init === undefined || init === null) return undefined;
+  if (Array.isArray(init)) {
+    const out: Record<string, string> = {};
+    for (const [key, value] of init) {
+      out[key] = String(value);
+    }
+    return out;
+  }
+  if (typeof Headers !== "undefined" && init instanceof Headers) {
+    const out: Record<string, string> = {};
+    init.forEach((value, key) => {
+      out[key] = value;
+    });
+    return out;
+  }
+  if (typeof init === "object") {
+    const out: Record<string, string> = {};
+    for (const [key, value] of Object.entries(init)) {
+      out[key] = String(value);
+    }
+    return out;
+  }
+  return undefined;
+}
+
+/**
  * Build the final headers for a request. JSON is the default content type
  * for any non-GET request that has a body. The Authorization header is
  * added opportunistically when a token is present.
@@ -92,6 +127,21 @@ function buildHeaders(
 }
 
 /**
+ * Narrow a parsed JSON value into our `ApiResponse<T>` envelope shape
+ * without trusting the runtime. Returns `null` if any required field
+ * is missing or of an unexpected type so the caller can fall back to
+ * a default error message instead of throwing on a malformed payload.
+ */
+function isApiResponse(value: unknown): value is ApiResponse<unknown> {
+  if (value === null || typeof value !== "object") return false;
+  const candidate = value as { success?: unknown; message?: unknown; data?: unknown };
+  return (
+    typeof candidate.success === "boolean" &&
+    typeof candidate.message === "string"
+  );
+}
+
+/**
  * Core wrapper around the native `fetch` API. Always returns the parsed
  * `data` payload on success; throws an `ApiError` on any non-2xx response.
  *
@@ -108,10 +158,7 @@ export async function apiFetch<T>(
   const method = (options.method ?? "GET").toUpperCase();
   const hasBody = options.body !== undefined && options.body !== null;
 
-  const headers = buildHeaders(
-    options.headers as Record<string, string> | undefined,
-    hasBody,
-  );
+  const headers = buildHeaders(normalizeHeaders(options.headers), hasBody);
 
   let response: Response;
   try {
@@ -135,33 +182,44 @@ export async function apiFetch<T>(
   const contentType = response.headers.get("Content-Type") ?? "";
   const isJson = contentType.includes("application/json");
 
-  let payload: ApiResponse<T> | null = null;
+  let raw: unknown = null;
   if (isJson) {
     try {
-      payload = (await response.json()) as ApiResponse<T>;
+      raw = await response.json();
     } catch {
-      payload = null;
+      raw = null;
     }
   }
+
+  // Narrow the raw payload to our `ApiResponse<T>` envelope shape. When
+  // the envelope is missing we treat the body as the raw `data` value.
+  const envelope = isApiResponse(raw) ? (raw as ApiResponse<T>) : null;
+  const rawData =
+    !envelope && raw !== null && typeof raw === "object" && "data" in raw
+      ? (raw as { data: T }).data
+      : null;
 
   if (!response.ok) {
     const status = response.status;
     const message =
-      payload?.message ??
+      envelope?.message ??
       defaultMessageForStatus(status) ??
       `Request failed with status ${status}.`;
-    const errors = payload?.errors;
+    const errors = envelope?.errors;
     throw new ApiError(status, message, errors);
   }
 
   // Success path: unwrap the envelope. If the backend forgot to send a
-  // `data` field we still return an empty cast so callers don't crash.
-  if (payload && "data" in payload) {
-    return payload.data;
+  // `data` field we still return an empty fallback so callers don't crash.
+  if (envelope) {
+    return envelope.data;
+  }
+  if (rawData !== null) {
+    return rawData;
   }
 
   // Fallback for endpoints that respond with raw JSON (no envelope).
-  return (await response.json()) as T;
+  return (raw ?? null) as T;
 }
 
 /**
@@ -190,4 +248,32 @@ function defaultMessageForStatus(status: number): string | null {
     default:
       return null;
   }
+}
+
+/**
+ * Shared internal helper for service-layer write operations that all
+ * follow the same shape:
+ *
+ *     apiFetch<T>(ENDPOINT, {
+ *       method: "POST" | "PATCH" | "PUT",
+ *       body: JSON.stringify(payload),
+ *     });
+ *
+ * Centralizing the JSON serialization keeps every write call site in
+ * the service layer symmetric with `apiFetch`'s read-only defaults
+ * and removes the repeated `JSON.stringify(payload)` boilerplate.
+ *
+ * Behavior is identical to the inline call sites — the request still
+ * goes through `apiFetch` so Bearer-token injection, envelope
+ * unwrapping, and error translation are unchanged.
+ */
+export async function apiSendJson<T>(
+  endpoint: string,
+  method: "POST" | "PATCH" | "PUT",
+  body: unknown,
+): Promise<T> {
+  return apiFetch<T>(endpoint, {
+    method,
+    body: JSON.stringify(body),
+  });
 }

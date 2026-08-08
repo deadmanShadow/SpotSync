@@ -420,6 +420,7 @@ const PRICE_FMT = (n: number) => `$${n.toFixed(2)}/hr`;
   } from "../services/mockZoneData";
   import { ApiError } from "../services/api";
   import { $isAuthenticated } from "../store/authStore";
+  import { toast } from "../lib/toast";
   import type { ParkingZone } from "../types/zone";
 
   /**
@@ -485,18 +486,7 @@ const PRICE_FMT = (n: number) => `$${n.toFixed(2)}/hr`;
     covered: "bg-purple-500/10 text-purple-300 border-purple-500/30",
   };
 
-  // Global toast helper exposed by Layout.astro's <script>.
-  type ToastType = "success" | "error" | "info";
-  type W = Window & { showToast?: (msg: string, type?: ToastType, duration?: number) => void };
-  function toast(msg: string, type: ToastType = "info", duration?: number): void {
-    const w = window as unknown as W;
-    if (typeof w.showToast === "function") {
-      w.showToast(msg, type, duration);
-    } else {
-      // Fallback if toast container isn't available yet.
-      console.log(`[toast:${type}] ${msg}`);
-    }
-  }
+  // Global toast helper is imported from `../lib/toast`.
 
   function escapeHtml(input: string): string {
     return input
@@ -677,7 +667,7 @@ const PRICE_FMT = (n: number) => `$${n.toFixed(2)}/hr`;
 
         // Auth guard: prompt sign-in if no session.
         if (!$isAuthenticated.get()) {
-          toast("Please sign in to reserve a spot.", "info");
+          toast.info("Please sign in to reserve a spot.");
           window.location.href = "/login";
           return;
         }
@@ -771,9 +761,8 @@ const PRICE_FMT = (n: number) => `$${n.toFixed(2)}/hr`;
           license_plate,
         });
 
-        toast(
+        toast.success(
           `Spot reserved at ${selectedZone.name} for plate ${license_plate.toUpperCase()}.`,
-          "success",
         );
         closeModal();
 
@@ -821,7 +810,7 @@ const PRICE_FMT = (n: number) => `$${n.toFixed(2)}/hr`;
       applyFilters();
     } catch (error) {
       // Soft-fail: keep the existing grid, just notify the user.
-      toast("Could not refresh the catalog. Please reload the page.", "error");
+      toast.error("Could not refresh the catalog. Please reload the page.");
       console.error("refetchZones failed:", error);
     }
   }
@@ -992,7 +981,7 @@ const PRICE_FMT = (n: number) => `$${n.toFixed(2)}/hr`;
 
     window.addEventListener("spotsync:zones-rotated", () => {
       void refetchZones().then(() => {
-        toast("Zone availability updated.", "info", 2500);
+        toast.info("Zone availability updated.", { duration: 2500 });
       });
     });
   }

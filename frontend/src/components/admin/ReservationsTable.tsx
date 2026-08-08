@@ -35,6 +35,7 @@ import {
   deleteReservation,
 } from "@/services/reservationService";
 import { initialsOf } from "@/lib/format";
+import { toast } from "@/lib/toast";
 import type { Reservation, ReservationStatus } from "@/types/reservation";
 import type { ZoneType } from "@/types/zone";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -181,17 +182,17 @@ export function ReservationsTable() {
     try {
       if (type === "cancel") {
         await cancelReservation(reservation.id);
-        window.showToast?.("Reservation cancelled.", "success");
+        toast.success("Reservation cancelled.");
       } else {
         await deleteReservation(reservation.id);
-        window.showToast?.("Reservation deleted.", "success");
+        toast.success("Reservation deleted.");
       }
       setPendingAction(null);
       await fetchData({ silent: true });
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "Action failed. Please try again.";
-      window.showToast?.(message, "error");
+      toast.error(message);
     } finally {
       setBusyAction(null);
     }

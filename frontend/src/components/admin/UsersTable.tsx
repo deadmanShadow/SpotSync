@@ -26,6 +26,7 @@ import {
   deleteUser,
 } from "@/services/userService";
 import { initialsOf } from "@/lib/format";
+import { toast } from "@/lib/toast";
 import { $user } from "@/store/authStore";
 import type { User, UserRole } from "@/types/auth";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -105,13 +106,13 @@ export function UsersTable() {
     setBusy(true);
     try {
       await deleteUser(pending.id);
-      window.showToast?.(`Deleted user ${pending.email}.`, "success");
+      toast.success(`Deleted user ${pending.email}.`);
       setPending(null);
       await fetchData();
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "Failed to delete user.";
-      window.showToast?.(message, "error");
+      toast.error(message);
     } finally {
       setBusy(false);
     }

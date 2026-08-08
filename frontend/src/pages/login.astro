@@ -106,8 +106,9 @@ import PrimarySubmit from "@/components/auth/PrimarySubmit.astro";
 
 <script>
   import { ApiError } from "../services/api";
-import { login } from "../services/authService";
-import { setSession } from "../store/authStore";
+  import { login } from "../services/authService";
+  import { setSession } from "../store/authStore";
+  import { toast } from "../lib/toast";
 
   /* ---------- One-shot cross-page notice ----------------------------- */
   // If the user just registered, /register stored a success notice here.
@@ -115,12 +116,7 @@ import { setSession } from "../store/authStore";
   const pendingNotice = window.sessionStorage.getItem("spotsync_auth_notice");
   if (pendingNotice) {
     window.sessionStorage.removeItem("spotsync_auth_notice");
-    const w = window as unknown as {
-      showToast?: (message: string, type?: string) => void;
-    };
-    if (typeof w.showToast === "function") {
-      w.showToast(pendingNotice, "success");
-    }
+    toast.success(pendingNotice);
   }
 
   /* ---------- Demo credentials ---------------------------------------- */
@@ -237,17 +233,12 @@ import { setSession } from "../store/authStore";
       const response = await login({ email, password });
       setSession(response.token, response.user);
 
-      const w = window as unknown as {
-        showToast?: (message: string, type?: string) => void;
-      };
-      if (typeof w.showToast === "function") {
-        w.showToast(`Welcome back, ${response.user.name}!`, "success");
-      }
+      toast.success(`Welcome back, ${response.user.name}!`);
 
       // Send admins to the admin console and drivers to the home page.
       const isAdmin = response.user.role === "admin";
-      if (isAdmin && typeof w.showToast === "function") {
-        w.showToast(`Signed in as admin. Welcome to the SpotSync console.`, "success");
+      if (isAdmin) {
+        toast.success(`Signed in as admin. Welcome to the SpotSync console.`);
       }
       window.location.href = isAdmin ? "/admin" : "/";
     } catch (err) {

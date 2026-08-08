@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { initialsOf } from "@/lib/format";
+import { toast } from "@/lib/toast";
 import { clearSession, getToken, $user } from "@/store/authStore";
 import type { User, UserRole } from "@/types/auth";
 
@@ -167,7 +168,7 @@ export function UserMenu(props: UserMenuProps) {
   function handleLogout() {
     setMenuOpen(false);
     clearSession();
-    window.showToast?.("You have been signed out.", "info");
+    toast.info("You have been signed out.");
     window.location.href = "/login";
   }
 

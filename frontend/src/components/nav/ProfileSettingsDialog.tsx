@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { initialsOf } from "@/lib/format";
+import { toast } from "@/lib/toast";
 import { updateUser } from "@/store/authStore";
 import { ApiError } from "@/services/api";
 import { updateProfile } from "@/services/authService";
@@ -114,7 +115,7 @@ export function ProfileSettingsDialog(props: ProfileSettingsDialogProps) {
       updateUser(updated);
       setInitialName(updated.name);
       setName(updated.name);
-      window.showToast?.("Profile updated successfully.", "success");
+      toast.success("Profile updated successfully.");
       onOpenChange(false);
     } catch (err) {
       if (err instanceof ApiError) {

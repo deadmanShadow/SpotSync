@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { ApiError } from "@/services/api";
 import { getZones, deleteZone } from "@/services/zoneService";
 import { formatDateTime } from "@/lib/format";
+import { toast } from "@/lib/toast";
 import type { ParkingZone, ZoneType } from "@/types/zone";
 import { ConfirmDialog } from "./ConfirmDialog";
 
@@ -87,13 +88,13 @@ export function ZonesGrid() {
     setBusy(true);
     try {
       await deleteZone(pending.id);
-      window.showToast?.(`Zone "${pending.name}" deleted.`, "success");
+      toast.success(`Zone "${pending.name}" deleted.`);
       setPending(null);
       await fetchData();
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "Failed to delete zone.";
-      window.showToast?.(message, "error");
+      toast.error(message);
     } finally {
       setBusy(false);
     }

@@ -244,29 +244,106 @@
   #toast-container {
     @apply fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none;
   }
+
+  /* On phones the toast container spans the full width with safe-area insets
+     so the notched / rounded corners don't clip the toast. */
+  @media (max-width: 640px) {
+    #toast-container {
+      left: 0.75rem;
+      right: 0.75rem;
+      top: max(0.75rem, env(safe-area-inset-top));
+    }
+    .toast {
+      max-width: none;
+      width: 100%;
+    }
+  }
+
   .toast {
     @apply pointer-events-auto min-w-[280px] max-w-sm rounded-xl border backdrop-blur-md
-           px-4 py-3 shadow-2xl animate-slide-in-right;
+           px-4 py-3 shadow-2xl animate-slide-in-right
+           flex items-start gap-3;
   }
+  .toast-icon {
+    @apply flex-shrink-0 mt-0.5;
+  }
+  .toast-text {
+    @apply flex-1 text-sm font-medium leading-snug break-words;
+  }
+  .toast-close {
+    @apply flex-shrink-0 -mr-1 -mt-1 p-1 rounded-md opacity-70 hover:opacity-100
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+           transition-opacity duration-150;
+  }
+
+  /* Slide-out animation triggered by Layout.astro on dismiss. */
+  @keyframes toast-slide-out-right {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(120%);
+    }
+  }
+  .toast-exit {
+    animation: toast-slide-out-right 0.25s ease-in forwards;
+    pointer-events: none;
+  }
+
+  /* Respect users who have asked for less motion: no slide animation. */
+  @media (prefers-reduced-motion: reduce) {
+    .toast {
+      animation: none;
+    }
+    .toast-exit {
+      animation: none;
+      opacity: 0;
+    }
+  }
+
   .toast-success {
     @apply bg-emerald-900/80 border-emerald-700/60 text-emerald-100;
   }
+  .toast-success .toast-close {
+    @apply text-emerald-100 focus-visible:ring-emerald-400;
+  }
+
   .toast-error {
     @apply bg-red-900/80 border-red-700/60 text-red-100;
   }
+  .toast-error .toast-close {
+    @apply text-red-100 focus-visible:ring-red-400;
+  }
+
   .toast-info {
     @apply bg-blue-900/80 border-blue-700/60 text-blue-100;
+  }
+  .toast-info .toast-close {
+    @apply text-blue-100 focus-visible:ring-blue-400;
   }
 
   /* Light-mode toast variants. */
   :root:not(.dark) .toast-success {
     @apply bg-emerald-50 border-emerald-200 text-emerald-800;
   }
+  :root:not(.dark) .toast-success .toast-close {
+    @apply text-emerald-700 focus-visible:ring-emerald-500;
+  }
+
   :root:not(.dark) .toast-error {
     @apply bg-red-50 border-red-200 text-red-800;
   }
+  :root:not(.dark) .toast-error .toast-close {
+    @apply text-red-700 focus-visible:ring-red-500;
+  }
+
   :root:not(.dark) .toast-info {
     @apply bg-blue-50 border-blue-200 text-blue-800;
+  }
+  :root:not(.dark) .toast-info .toast-close {
+    @apply text-blue-700 focus-visible:ring-blue-500;
   }
 }
 

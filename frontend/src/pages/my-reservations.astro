@@ -519,6 +519,7 @@ import Layout from "@/layouts/Layout.astro";
   import { getUser, isAuthenticated } from "../store/authStore";
   import { cancelReservation, getMyReservations } from "../services/reservationService";
   import { ApiError } from "../services/api";
+  import { toast } from "../lib/toast";
   import type { Reservation, ReservationStatus } from "../types/reservation";
   import type { ParkingZone, ZoneType } from "../types/zone";
 
@@ -1013,7 +1014,7 @@ import Layout from "@/layouts/Layout.astro";
       const zoneName = button.dataset.zoneName ?? "";
       const plate = button.dataset.licensePlate ?? "";
       if (!Number.isFinite(id) || id <= 0) {
-        showToast("Invalid reservation ID.", "error");
+        toast.error("Invalid reservation ID.");
         return;
       }
       openCancelDialog(id, zoneName, plate);
@@ -1075,7 +1076,7 @@ import Layout from "@/layouts/Layout.astro";
       }
       paintAll();
       closeCancelDialog();
-      showToast(`Reservation #${id} cancelled. The spot is now free.`, "success");
+      toast.success(`Reservation #${id} cancelled. The spot is now free.`);
     } catch (error) {
       // Roll back.
       if (targetReservation) {
@@ -1086,7 +1087,7 @@ import Layout from "@/layouts/Layout.astro";
         error instanceof ApiError
           ? error.message
           : "Failed to cancel reservation. Please try again.";
-      showToast(message, "error");
+      toast.error(message);
     } finally {
       if (confirmBtn) {
         confirmBtn.disabled = false;
@@ -1120,19 +1121,6 @@ import Layout from "@/layouts/Layout.astro";
       event.preventDefault();
       void loadReservations();
     });
-  }
-
-  // ---------------------------------------------------------------------------
-  // Toast passthrough
-  // ---------------------------------------------------------------------------
-
-  function showToast(message: string, type: "success" | "error" | "info" = "info"): void {
-    const w = window as unknown as {
-      showToast?: (message: string, type?: string) => void;
-    };
-    if (typeof w.showToast === "function") {
-      w.showToast(message, type);
-    }
   }
 
   // ---------------------------------------------------------------------------

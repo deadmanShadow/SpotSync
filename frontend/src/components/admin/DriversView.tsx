@@ -22,6 +22,7 @@ import {
 } from "@/services/adminData";
 import { deleteUser } from "@/services/userService";
 import { formatDateTime, initialsOf } from "@/lib/format";
+import { toast } from "@/lib/toast";
 import type { Reservation, ReservationStatus } from "@/types/reservation";
 import { ConfirmDialog } from "./ConfirmDialog";
 
@@ -91,14 +92,14 @@ export function DriversView() {
     setBusy(true);
     try {
       await deleteUser(pending.user.id);
-      window.showToast?.(`Driver ${pending.user.email} removed.`, "success");
+      toast.success(`Driver ${pending.user.email} removed.`);
       setPending(null);
       if (selectedId === pending.user.id) setSelectedId(null);
       await fetchData();
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "Failed to delete driver.";
-      window.showToast?.(message, "error");
+      toast.error(message);
     } finally {
       setBusy(false);
     }

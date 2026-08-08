@@ -83,9 +83,8 @@
 <script>
   import { ApiError } from "../services/api";
   import { createZone } from "../services/zoneService";
+  import { toast } from "../lib/toast";
   import type { CreateZonePayload, ZoneType } from "../types/zone";
-
-  type ToastType = "success" | "error" | "info";
 
   const dialog = document.querySelector<HTMLDialogElement>("[data-create-zone-modal]");
   const form = document.querySelector<HTMLFormElement>("[data-create-zone-form]");
@@ -93,11 +92,6 @@
   const errorText = document.querySelector<HTMLElement>("[data-create-zone-error-text]");
   const submitButton = document.querySelector<HTMLButtonElement>("[data-create-zone-submit]");
   const submitLabel = document.querySelector<HTMLElement>("[data-create-zone-submit-label]");
-
-  function showToast(message: string, type: ToastType): void {
-    const target = window as unknown as { showToast?: (message: string, type?: string) => void };
-    target.showToast?.(message, type);
-  }
 
   function hideError(): void {
     errorBox?.classList.add("hidden");
@@ -190,14 +184,14 @@
       const zone = await createZone(payload);
       form.reset();
       closeDialog();
-      showToast(`${zone.name} was created successfully.`, "success");
+      toast.success(`${zone.name} was created successfully.`);
       window.dispatchEvent(new CustomEvent("spotsync:zone-created", { detail: zone }));
     } catch (error) {
       const message = error instanceof ApiError
         ? error.message
         : "Unable to create the zone. Please try again.";
       showError(message);
-      showToast(message, "error");
+      toast.error(message);
       if (error instanceof ApiError && error.status === 401) {
         window.setTimeout(() => window.location.replace("/login"), 1000);
       }

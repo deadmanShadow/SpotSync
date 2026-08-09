@@ -45,13 +45,30 @@ export async function refetchZones(): Promise<void> {
 }
 
 /**
+ * Display-only sort: zones with available spots render first, full
+ * zones render last. Mirrors the SSR ordering in ZoneCatalogSection.astro
+ * so a post-reservation refetch produces the same visual order as the
+ * initial server-rendered catalog. Pure UI ordering — does not touch
+ * availability/booking logic. Stable for items within the same group.
+ */
+function sortZonesForDisplay(zones: ParkingZone[]): ParkingZone[] {
+  return [...zones].sort((a, b) => {
+    const aFull = (a.available_spots ?? 0) <= 0 ? 1 : 0;
+    const bFull = (b.available_spots ?? 0) <= 0 ? 1 : 0;
+    return aFull - bFull;
+  });
+}
+
+/**
  * Re-render the zone grid with new data. We rebuild the inner HTML
  * to match the markup produced by ZoneCard.astro.
  */
 export function renderZones(zones: ParkingZone[]): void {
   const grid = document.querySelector<HTMLDivElement>("[data-zone-grid]");
   if (!grid) return;
-  grid.innerHTML = zones.map((zone) => cardHtml(zone)).join("");
+  grid.innerHTML = sortZonesForDisplay(zones)
+    .map((zone) => cardHtml(zone))
+    .join("");
   // Re-bind the reserve triggers for the new cards.
   // Lazy-load to avoid an import cycle with reserveModalController.
   void import("./reserveModalController").then((m) => m.bindReserveTriggersOnce());

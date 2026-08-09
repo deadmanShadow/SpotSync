@@ -24,6 +24,17 @@ interface Props {
 }
 
 const { zones, fetchError } = Astro.props;
+
+// Display-only sort: zones with available spots first, full zones last.
+// This is purely a UI ordering — it does NOT mutate any input,
+// does not change availability calculations, and does not affect
+// the underlying booking/business logic. Within each group the
+// original order is preserved (stable sort via Array#sort).
+const sortedZones = [...zones].sort((a, b) => {
+  const aFull = (a.available_spots ?? 0) <= 0 ? 1 : 0;
+  const bFull = (b.available_spots ?? 0) <= 0 ? 1 : 0;
+  return aFull - bFull;
+});
 ---
 
 <section id="zone-catalog" class="container mx-auto px-4 pb-24 scroll-mt-20">
@@ -93,7 +104,7 @@ const { zones, fetchError } = Astro.props;
       data-zone-grid
       id="zone-grid"
     >
-      {zones.map((zone) => <ZoneCard zone={zone} />)}
+      {sortedZones.map((zone) => <ZoneCard zone={zone} />)}
     </div>
   )}
 

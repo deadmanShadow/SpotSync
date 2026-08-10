@@ -109,9 +109,11 @@ func build() {
 
 	// 3. Health check route (public) — always available, even if the
 	// database is down. Useful for Vercel/load-balancer health probes.
-	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{"status": "UP"})
-	})
+	// Both GET and HEAD are wired because the in-image HEALTHCHECK uses
+	// wget --spider, which on wget 1.21.x always issues HEAD regardless
+	// of any --method flag (known upstream behaviour).
+	e.GET("/health", healthHandler)
+	e.HEAD("/health", healthHandler)
 
 	// 4. Connect to the database. We do this BEFORE the server starts so the
 	// route registration block below can be entered when the connection is
@@ -212,4 +214,11 @@ func build() {
 	reservationGroup.DELETE("/:id", reservationHandler.Delete)
 
 	app = e
+}
+
+// healthHandler responds 200 with a small JSON body. Wired to both
+// GET and HEAD so the in-image wget --spider HEALTHCHECK (which
+// always sends HEAD on wget 1.21.x) succeeds.
+func healthHandler(c echo.Context) error {
+	return c.JSON(http.StatusOK, map[string]string{"status": "UP"})
 }

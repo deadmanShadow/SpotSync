@@ -19,8 +19,13 @@ type ZoneResponse struct {
 	TotalCapacity  int       `json:"total_capacity"`
 	AvailableSpots int       `json:"available_spots"`
 	PricePerHour   float64   `json:"price_per_hour"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at,omitempty"`
+	// SpotHolds is a per-spot bitmap of length TotalCapacity. Element i
+	// is 1 when spot #i+1 is held (presentation-only) and 0 when it is
+	// available. Reserved for clients that want to render a per-spot
+	// grid; safe to ignore when the UI only needs AvailableSpots.
+	SpotHolds []int64  `json:"spot_holds"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
 }
 
 // UpdateZoneRequest allows partial updates to a zone. All fields are optional;

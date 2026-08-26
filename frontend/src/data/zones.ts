@@ -104,6 +104,12 @@ export function buildSeedZones(): ParkingZone[] {
     const available_spots = isAvailable
       ? Math.max(1, Math.round(spec.total_capacity * (0.5 + Math.random() * 0.5)))
       : 0;
+    // Build a placeholder spot_holds array that matches total_capacity
+    // so the type satisfies ParkingZone. The runtime layer
+    // (mockZoneData.ts) regenerates spot_holds on first read so the
+    // first paint shows realistic per-spot availability rather than
+    // whatever we put here.
+    const spot_holds: number[] = new Array(spec.total_capacity).fill(0);
     const zone: ParkingZone = {
       id: index + 1,
       name: spec.name,
@@ -111,6 +117,7 @@ export function buildSeedZones(): ParkingZone[] {
       total_capacity: spec.total_capacity,
       available_spots,
       price_per_hour: spec.price_per_hour,
+      spot_holds,
       created_at: SEED_TIMESTAMP,
     };
     return zone;

@@ -61,8 +61,11 @@ func (r *reservationRepository) Create(reservation *models.Reservation) error {
 //     serialized capacity check.
 //  3. COUNT active reservations for the zone (inside the same tx, so the
 //     committed count is what we see).
-//  4. If activeCount >= total_capacity, return ErrZoneFull (the caller maps
-//     it to HTTP 409 Conflict).
+//  4. If activeCount + holdCount >= total_capacity, return ErrZoneFull.
+//     `holdCount` is the number of "held" (presentation-only) spots in
+//     spot_holds; held spots are additive to real reservations and are
+//     truly off-limits for booking. The caller maps ErrZoneFull to HTTP
+//     409 Conflict.
 //  5. Otherwise INSERT the new reservation and COMMIT.
 //
 // Any error inside the transaction function causes GORM to rollback
@@ -91,8 +94,11 @@ func (r *reservationRepository) CreateWithCapacityCheck(userID uint, zoneID uint
 			return err
 		}
 
-		// 3. CAPACITY CHECK.
-		if int(activeCount) >= z.TotalCapacity {
+		// 3. CAPACITY CHECK. Held spots (len(SpotHolds)) are subtracted
+		// from capacity alongside real active reservations; they are
+		// truly off-limits for booking per the spec.
+		holdCount := len(z.SpotHolds)
+		if int(activeCount)+holdCount >= z.TotalCapacity {
 			return ErrZoneFull
 		}
 

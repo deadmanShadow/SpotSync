@@ -5,6 +5,11 @@
  * charging bay, a covered garage floor, or an open-air general lot). The
  * `available_spots` field is the live, server-managed counter that powers
  * the dynamic capacity progress bars on the home page.
+ *
+ * `spot_holds` is a per-spot bitmap of length `total_capacity`: element i
+ * is 1 when spot #i+1 is reserved (presentation-only) and 0 when it is
+ * available. The home page renders this as a per-spot grid below the
+ * aggregate progress bar.
  */
 
 export type ZoneType = "general" | "ev_charging" | "covered";
@@ -17,6 +22,8 @@ export interface ParkingZone {
   total_capacity: number;
   available_spots: number;
   price_per_hour: number;
+  /** Per-spot bitmap: 0 = available, 1 = reserved (held). */
+  spot_holds: number[];
   created_at: string;
 }
 

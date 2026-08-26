@@ -101,6 +101,42 @@ function cardHtml(zone: ParkingZone): string {
   const fillPercent = total === 0 ? 0 : Math.min(100, (available / total) * 100);
   const isFull = available <= 0;
 
+  // Per-spot grid is rendered only when the backend (or mock) provided
+  // a well-formed spot_holds array matching total_capacity. Per spec
+  // §4.4, any missing or mismatched data falls back to the old
+  // all-available behavior — the grid section is simply omitted.
+  const spotHolds = Array.isArray(zone.spot_holds) ? zone.spot_holds : null;
+  const showSpotGrid = spotHolds !== null && total > 0 && spotHolds.length === total;
+
+  const spotCells = showSpotGrid && spotHolds
+    ? spotHolds.map((held, idx) => {
+        const reserved = held === 1;
+        const cls = reserved
+          ? "w-7 h-7 inline-flex items-center justify-center rounded-md text-[10px] font-semibold border bg-slate-700/40 text-slate-400 border-slate-600/40"
+          : "w-7 h-7 inline-flex items-center justify-center rounded-md text-[10px] font-semibold border bg-emerald-500/15 text-emerald-300 border-emerald-500/30";
+        const stateLabel = reserved ? "reserved" : "available";
+        const title = reserved ? `Spot #${idx + 1} — Reserved` : `Spot #${idx + 1} — Available`;
+        return `<div class="${cls}" title="${escapeHtml(title)}" data-spot-index="${idx}" data-spot-state="${stateLabel}">${idx + 1}</div>`;
+      }).join("")
+    : "";
+
+  const spotGridHtml = showSpotGrid
+    ? `<div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-medium text-slate-400">Spot status</p>
+            <p class="text-[10px] text-slate-500">
+              <span class="inline-block w-2 h-2 rounded-sm bg-emerald-500/60 border border-emerald-500/40 align-middle"></span>
+              <span class="ml-1 mr-2 align-middle">available</span>
+              <span class="inline-block w-2 h-2 rounded-sm bg-slate-700/60 border border-slate-600/40 align-middle"></span>
+              <span class="ml-1 align-middle">reserved</span>
+            </p>
+          </div>
+          <div class="grid gap-1.5 grid-cols-6 sm:grid-cols-8 md:grid-cols-9" data-spot-grid data-zone-id="${zone.id}" aria-label="${available} of ${total} spots available">
+            ${spotCells}
+          </div>
+        </div>`
+    : "";
+
   let barColor = "bg-emerald-500";
   let barShadow = "shadow-emerald-500/40";
   let statusLabel = "Open";
@@ -190,6 +226,8 @@ function cardHtml(zone: ParkingZone): string {
           </div>
           <p class="text-xs text-slate-500">${occupied} spot${occupied === 1 ? "" : "s"} currently occupied</p>
         </div>
+
+        ${spotGridHtml}
 
         <div class="pt-2 mt-auto">
           ${buttonHtml}

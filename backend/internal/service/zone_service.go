@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"log"
 
 	"gorm.io/gorm"
 
@@ -43,7 +44,13 @@ func (s *zoneService) Create(req dto.CreateZoneRequest) (*models.ParkingZone, er
 	if err := s.zoneRepo.Create(zone); err != nil {
 		return nil, err
 	}
-	return zone, nil
+	// Per spec §3.4: regenerate spot_holds on zone create so the new
+	// zone renders with realistic per-spot availability immediately.
+	if err := s.zoneRepo.RegenerateSpotHolds(zone.ID); err != nil {
+		return nil, err
+	}
+	// Re-fetch so the returned record has the populated spot_holds.
+	return s.zoneRepo.FindByID(zone.ID)
 }
 
 func (s *zoneService) GetByID(id uint) (*models.ParkingZone, error) {
@@ -69,6 +76,9 @@ func (s *zoneService) Update(id uint, req dto.UpdateZoneRequest) (*models.Parkin
 		}
 		return nil, err
 	}
+	// Capture old capacity so we can detect a change and regenerate
+	// spot_holds accordingly (per spec §3.4).
+	oldCapacity := zone.TotalCapacity
 	if req.Name != "" {
 		zone.Name = req.Name
 	}
@@ -84,6 +94,14 @@ func (s *zoneService) Update(id uint, req dto.UpdateZoneRequest) (*models.Parkin
 	if err := s.zoneRepo.Update(zone); err != nil {
 		return nil, err
 	}
+	if zone.TotalCapacity != oldCapacity {
+		// Capacity changed → regenerate spot_holds to match.
+		if err := s.zoneRepo.RegenerateSpotHolds(zone.ID); err != nil {
+			return nil, err
+		}
+		// Re-fetch to surface the new spot_holds on the returned record.
+		return s.zoneRepo.FindByID(zone.ID)
+	}
 	return zone, nil
 }
 
@@ -98,15 +116,31 @@ func (s *zoneService) Delete(id uint) error {
 }
 
 // ListWithAvailability returns every parking zone with its dynamically
-// computed AvailableSpots value.
+// computed AvailableSpots value. Calls EnsureSpotHoldsLength on every
+// row first so legacy rows (or rows whose capacity changed under the
+// hood) self-heal their spot_holds array.
 func (s *zoneService) ListWithAvailability() ([]dto.ZoneResponse, error) {
+	zones, err := s.zoneRepo.List()
+	if err != nil {
+		return nil, err
+	}
+	for _, z := range zones {
+		if err := s.zoneRepo.EnsureSpotHoldsLength(z.ID); err != nil {
+			// Per spec §6.1: never throw on backfill — log and continue
+			// so one bad row doesn't fail the whole catalog.
+			log.Printf("[zone_service] EnsureSpotHoldsLength(%d) failed: %v", z.ID, err)
+		}
+	}
 	return s.zoneRepo.FindAllWithAvailability()
 }
 
 // GetByIDWithAvailability returns a single parking zone with its dynamically
 // computed AvailableSpots value. Returns ErrZoneNotFound if the zone does
-// not exist.
+// not exist. Calls EnsureSpotHoldsLength first so legacy rows self-heal.
 func (s *zoneService) GetByIDWithAvailability(id uint) (*dto.ZoneResponse, error) {
+	if err := s.zoneRepo.EnsureSpotHoldsLength(id); err != nil {
+		log.Printf("[zone_service] EnsureSpotHoldsLength(%d) failed: %v", id, err)
+	}
 	z, err := s.zoneRepo.FindByIDWithAvailability(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

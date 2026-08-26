@@ -198,6 +198,20 @@ func (r *ZoneRotator) RotateOnce() error {
 	availCount := len(available)
 	log.Printf("[rotator] %d zones available / %d full (target: %d/%d)",
 		availCount, len(full), availableTarget, fullTarget)
+
+	// Per spec §3.6: every hourly tick reshuffles which specific spot
+	// positions are held. This runs on every tick (regardless of whether
+	// the 60/40 zone-level split actually flipped) so the visible
+	// per-spot grid churns hourly.
+	//
+	// Note: RegenerateSpotHolds uses math/rand/v2 internally, which is
+	// safe for concurrent use, so we don't need to share r.mu with it.
+	for _, z := range zones {
+		if err := RegenerateSpotHolds(r.db, z.ID); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

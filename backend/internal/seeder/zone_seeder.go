@@ -149,6 +149,15 @@ func SeedIfNeeded(db *gorm.DB) (int, error) {
 		return 0, fmt.Errorf("seeder: failed to insert zones: %w", err)
 	}
 
+	// Per spec §3.5: regenerate spot_holds for each newly seeded zone
+	// so a fresh DB boots into realistic per-spot availability instead
+	// of every spot appearing available.
+	for i := range toInsert {
+		if err := RegenerateSpotHolds(db, toInsert[i].ID); err != nil {
+			log.Printf("[seeder] RegenerateSpotHolds(zone %d) failed: %v", toInsert[i].ID, err)
+		}
+	}
+
 	log.Printf("[seeder] Inserted %d new zones. Catalog now has %d zones (target: %d).",
 		len(toInsert), int(existingCount)+len(toInsert), TargetZoneCount)
 	return len(toInsert), nil

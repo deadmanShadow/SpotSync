@@ -197,6 +197,7 @@ function bindReserveTriggers(): void {
         total_capacity: Number(card.dataset.zoneTotal ?? 0),
         available_spots: Number(card.dataset.zoneAvailable ?? 0),
         price_per_hour: 0, // filled by the server card if needed; modal uses card data
+        spot_holds: [], // reservation modal doesn't need per-spot state
         created_at: "",
       };
 

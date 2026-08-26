@@ -4,10 +4,12 @@ import (
 	"errors"
 	"time"
 
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 
 	"spotsync-backend/internal/dto"
 	"spotsync-backend/internal/models"
+	"spotsync-backend/internal/seeder"
 )
 
 // ZoneRepository defines the persistence contract for ParkingZone records.
@@ -20,6 +22,13 @@ type ZoneRepository interface {
 	CountActiveReservations(zoneID uint) (int64, error)
 	FindAllWithAvailability() ([]dto.ZoneResponse, error)
 	FindByIDWithAvailability(id uint) (*dto.ZoneResponse, error)
+	// RegenerateSpotHolds replaces a zone's spot_holds with a fresh
+	// random array of length total_capacity. See seeder.spot_holds.go
+	// for the algorithm.
+	RegenerateSpotHolds(zoneID uint) error
+	// EnsureSpotHoldsLength backfills spot_holds if its length does not
+	// match total_capacity. Idempotent; cheap when already correct.
+	EnsureSpotHoldsLength(zoneID uint) error
 }
 
 type zoneRepository struct {
@@ -106,7 +115,16 @@ func (r *zoneRepository) CountActiveReservations(zoneID uint) (int64, error) {
 // FindAllWithAvailability returns every parking zone with a dynamically
 // computed AvailableSpots value:
 //
-//	available_spots = total_capacity - active_reservations - rotation_hold
+//	available_spots = total_capacity
+//	                   - SUM(spot_holds)
+//	                   - COUNT(active_reservations)
+//	                   - rotation_hold
+//
+// The `spot_holds` column is the per-spot bitmap managed by the seeder
+// (see internal/seeder/spot_holds.go): a presentation-only simulation
+// layer that reserves a random subset of spots in each zone. Held spots
+// are additive to real reservations and block new bookings until the
+// next regeneration (zone create/capacity change / hourly rotation).
 //
 // The `rotation_hold` column is owned by the ZoneRotator (see
 // internal/seeder/rotator.go) and is used to mark a zone as "full" for
@@ -118,14 +136,15 @@ func (r *zoneRepository) CountActiveReservations(zoneID uint) (int64, error) {
 // to do an N+1 lookup.
 func (r *zoneRepository) FindAllWithAvailability() ([]dto.ZoneResponse, error) {
 	type row struct {
-		ID             uint    `gorm:"column:id"`
-		Name           string  `gorm:"column:name"`
-		Type           string  `gorm:"column:type"`
-		TotalCapacity  int     `gorm:"column:total_capacity"`
-		AvailableSpots int     `gorm:"column:available_spots"`
-		PricePerHour   float64 `gorm:"column:price_per_hour"`
-		CreatedAt      string  `gorm:"column:created_at"`
-		UpdatedAt      string  `gorm:"column:updated_at"`
+		ID             uint          `gorm:"column:id"`
+		Name           string        `gorm:"column:name"`
+		Type           string        `gorm:"column:type"`
+		TotalCapacity  int           `gorm:"column:total_capacity"`
+		AvailableSpots int           `gorm:"column:available_spots"`
+		PricePerHour   float64       `gorm:"column:price_per_hour"`
+		SpotHolds      pq.Int64Array `gorm:"column:spot_holds"`
+		CreatedAt      string        `gorm:"column:created_at"`
+		UpdatedAt      string        `gorm:"column:updated_at"`
 	}
 
 	var rows []row
@@ -133,11 +152,13 @@ func (r *zoneRepository) FindAllWithAvailability() ([]dto.ZoneResponse, error) {
 		Table("parking_zones pz").
 		Select(`pz.id, pz.name, pz.type, pz.total_capacity,
 		        GREATEST(0, pz.total_capacity
+		            - COALESCE(array_length(pz.spot_holds, 1), 0)
 		            - COALESCE((SELECT COUNT(*) FROM reservations r
 		                WHERE r.zone_id = pz.id AND r.status = 'active'), 0)
 		            - pz.rotation_hold
 		        ) AS available_spots,
-		        pz.price_per_hour, pz.created_at, pz.updated_at`).
+		        pz.price_per_hour, pz.spot_holds,
+		        pz.created_at, pz.updated_at`).
 		Order("pz.id ASC").
 		Scan(&rows).Error
 	if err != nil {
@@ -153,6 +174,7 @@ func (r *zoneRepository) FindAllWithAvailability() ([]dto.ZoneResponse, error) {
 			TotalCapacity:  r.TotalCapacity,
 			AvailableSpots: r.AvailableSpots,
 			PricePerHour:   r.PricePerHour,
+			SpotHolds:      []int64(r.SpotHolds),
 		}
 		if t, err := parseTime(r.CreatedAt); err == nil {
 			z.CreatedAt = t
@@ -170,14 +192,15 @@ func (r *zoneRepository) FindAllWithAvailability() ([]dto.ZoneResponse, error) {
 // does not exist.
 func (r *zoneRepository) FindByIDWithAvailability(id uint) (*dto.ZoneResponse, error) {
 	type row struct {
-		ID             uint    `gorm:"column:id"`
-		Name           string  `gorm:"column:name"`
-		Type           string  `gorm:"column:type"`
-		TotalCapacity  int     `gorm:"column:total_capacity"`
-		AvailableSpots int     `gorm:"column:available_spots"`
-		PricePerHour   float64 `gorm:"column:price_per_hour"`
-		CreatedAt      string  `gorm:"column:created_at"`
-		UpdatedAt      string  `gorm:"column:updated_at"`
+		ID             uint          `gorm:"column:id"`
+		Name           string        `gorm:"column:name"`
+		Type           string        `gorm:"column:type"`
+		TotalCapacity  int           `gorm:"column:total_capacity"`
+		AvailableSpots int           `gorm:"column:available_spots"`
+		PricePerHour   float64       `gorm:"column:price_per_hour"`
+		SpotHolds      pq.Int64Array `gorm:"column:spot_holds"`
+		CreatedAt      string        `gorm:"column:created_at"`
+		UpdatedAt      string        `gorm:"column:updated_at"`
 	}
 
 	var r0 row
@@ -185,11 +208,13 @@ func (r *zoneRepository) FindByIDWithAvailability(id uint) (*dto.ZoneResponse, e
 		Table("parking_zones pz").
 		Select(`pz.id, pz.name, pz.type, pz.total_capacity,
 		        GREATEST(0, pz.total_capacity
+		            - COALESCE(array_length(pz.spot_holds, 1), 0)
 		            - COALESCE((SELECT COUNT(*) FROM reservations r
 		                WHERE r.zone_id = pz.id AND r.status = 'active'), 0)
 		            - pz.rotation_hold
 		        ) AS available_spots,
-		        pz.price_per_hour, pz.created_at, pz.updated_at`).
+		        pz.price_per_hour, pz.spot_holds,
+		        pz.created_at, pz.updated_at`).
 		Where("pz.id = ?", id).
 		Scan(&r0).Error
 	if err != nil {
@@ -208,6 +233,7 @@ func (r *zoneRepository) FindByIDWithAvailability(id uint) (*dto.ZoneResponse, e
 		TotalCapacity:  r0.TotalCapacity,
 		AvailableSpots: r0.AvailableSpots,
 		PricePerHour:   r0.PricePerHour,
+		SpotHolds:      []int64(r0.SpotHolds),
 	}
 	if t, err := parseTime(r0.CreatedAt); err == nil {
 		z.CreatedAt = t
@@ -216,4 +242,24 @@ func (r *zoneRepository) FindByIDWithAvailability(id uint) (*dto.ZoneResponse, e
 		z.UpdatedAt = t
 	}
 	return z, nil
+}
+
+// RegenerateSpotHolds replaces a zone's spot_holds with a fresh random
+// array of length total_capacity. Thin wrapper that delegates to the
+// seeder package where the algorithm lives. Used by the service on
+// zone create and on capacity-changing updates.
+//
+// See seeder.RegenerateSpotHolds for the full algorithm description.
+func (r *zoneRepository) RegenerateSpotHolds(zoneID uint) error {
+	return seeder.RegenerateSpotHolds(r.db, zoneID)
+}
+
+// EnsureSpotHoldsLength backfills a zone's spot_holds when its length
+// does not match total_capacity. Called on every catalog read so
+// legacy rows self-heal on first access. Returns nil if no backfill
+// is required.
+//
+// See seeder.EnsureSpotHoldsLength for the full algorithm description.
+func (r *zoneRepository) EnsureSpotHoldsLength(zoneID uint) error {
+	return seeder.EnsureSpotHoldsLength(r.db, zoneID)
 }

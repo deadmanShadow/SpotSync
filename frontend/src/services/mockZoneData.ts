@@ -48,8 +48,15 @@ export const AVAILABLE_TARGET_PERCENT = 0.6;
  * `SEED_ZONES` array on first access. Kept as a module-level singleton
  * so the rotation timer, the service getters, and the reservation
  * mutator all see the same state.
+ *
+ * Each cloned zone also gets a freshly generated `spot_holds` bitmap so
+ * the per-spot grid renders realistic per-zone availability from the
+ * very first paint.
  */
-let liveZones: ParkingZone[] = SEED_ZONES.map((zone) => ({ ...zone }));
+let liveZones: ParkingZone[] = SEED_ZONES.map((zone) => ({
+  ...zone,
+  spot_holds: generateSpotHolds(zone.total_capacity),
+}));
 
 /** Track IDs that have been reserved (in-memory). */
 const reservationLedger: Array<{
@@ -71,14 +78,57 @@ let lastRotationAt: number = Date.now();
 /* -------------------------------------------------------------------------- */
 
 /**
- * Choose a random available_spots count between 50% and 100% of the
- * zone's total capacity. The lower bound is "at least half full" so
- * capacity bars never look suspiciously empty after a refresh.
+ * Choose a random available_spots count in the band
+ * `[floor(N/2), ceil(N*0.6)]` where N is the zone's total capacity.
+ * This is the spec-mandated per-zone availability range — roughly
+ * half to 60% available, leaving 40-50% reserved. For N=18 this
+ * yields available ∈ [9, 11].
  */
 function pickAvailableSpots(totalCapacity: number): number {
-  const lo = Math.max(1, Math.round(totalCapacity * 0.5));
-  const hi = totalCapacity;
-  return Math.round(lo + Math.random() * (hi - lo));
+  if (totalCapacity <= 0) return 0;
+  const lo = Math.floor(totalCapacity / 2);
+  const hi = Math.ceil(totalCapacity * 0.6);
+  if (hi < lo) return lo;
+  return lo + Math.floor(Math.random() * (hi - lo + 1));
+}
+
+/**
+ * Build a per-spot holds bitmap of length totalCapacity with a random
+ * number of held positions (1s). The held count lives in
+ * `[floor(N*0.4), ceil(N*0.5)]` — equivalent to "available ∈
+ * [floor(N/2), ceil(N*0.6)]" inverted — so the two halves of the
+ * mock mirror each other and the spec invariant is preserved.
+ *
+ * Algorithm (matches the backend seeder exactly):
+ *   1. Build []number of length N, all 1s (held).
+ *   2. Fisher-Yates shuffle.
+ *   3. Flip the first (N - holdCount) entries to 0 (available).
+ *
+ * Returns an empty array for N <= 0.
+ */
+function generateSpotHolds(totalCapacity: number): number[] {
+  if (totalCapacity <= 0) return [];
+  const n = totalCapacity;
+  const lo = Math.floor(n * 0.4); // held lower bound
+  const hi = Math.ceil(n * 0.5);  // held upper bound
+  const hiClamped = Math.min(hi, n);
+  const holdCount = lo + Math.floor(Math.random() * (hiClamped - lo + 1));
+
+  const holds: number[] = new Array(n).fill(1);
+
+  // Fisher-Yates in-place shuffle.
+  for (let i = holds.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [holds[i], holds[j]] = [holds[j], holds[i]];
+  }
+
+  // Flip the first (n - holdCount) entries to 0.
+  const availableCount = Math.max(0, n - holdCount);
+  for (let i = 0; i < availableCount; i++) {
+    holds[i] = 0;
+  }
+
+  return holds;
 }
 
 /**
@@ -131,12 +181,14 @@ export function rotateAvailability(): ParkingZone[] {
   for (let i = 0; i < fullToFlip && i < full.length; i++) {
     const zone = full[i];
     zone.available_spots = pickAvailableSpots(zone.total_capacity);
+    zone.spot_holds = generateSpotHolds(zone.total_capacity);
   }
 
   // Flip a few zones to full.
   for (let i = 0; i < availableToFlip && i < available.length; i++) {
     const zone = available[i];
     zone.available_spots = 0;
+    zone.spot_holds = generateSpotHolds(zone.total_capacity);
   }
 
   // Even when the targets match exactly, shuffle which zones are
@@ -148,9 +200,11 @@ export function rotateAvailability(): ParkingZone[] {
       // Move one from available to full...
       const a = available[i];
       a.available_spots = 0;
+      a.spot_holds = generateSpotHolds(a.total_capacity);
       // ...and a different one from full to available.
       const f = full[i];
       f.available_spots = pickAvailableSpots(f.total_capacity);
+      f.spot_holds = generateSpotHolds(f.total_capacity);
     }
   }
 
@@ -319,7 +373,10 @@ export async function getMockMyReservations(): Promise<
  * Not used by the running app, but exported so tests can be hermetic.
  */
 export function __resetMockState(): void {
-  liveZones = SEED_ZONES.map((zone) => ({ ...zone }));
+  liveZones = SEED_ZONES.map((zone) => ({
+    ...zone,
+    spot_holds: generateSpotHolds(zone.total_capacity),
+  }));
   reservationLedger.length = 0;
   nextReservationId = 1;
   lastRotationAt = Date.now();

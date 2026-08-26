@@ -62,10 +62,12 @@ func (r *reservationRepository) Create(reservation *models.Reservation) error {
 //  3. COUNT active reservations for the zone (inside the same tx, so the
 //     committed count is what we see).
 //  4. If activeCount + holdCount >= total_capacity, return ErrZoneFull.
-//     `holdCount` is the number of "held" (presentation-only) spots in
-//     spot_holds; held spots are additive to real reservations and are
-//     truly off-limits for booking. The caller maps ErrZoneFull to HTTP
-//     409 Conflict.
+//     `holdCount` is the number of held positions (entries equal to 1)
+//     in spot_holds; held spots are additive to real reservations and are
+//     truly off-limits for booking. NOTE: it is NOT len(z.SpotHolds),
+//     which would always equal total_capacity and wrongly reject every
+//     reservation the moment spot_holds is populated. The caller maps
+//     ErrZoneFull to HTTP 409 Conflict.
 //  5. Otherwise INSERT the new reservation and COMMIT.
 //
 // Any error inside the transaction function causes GORM to rollback
@@ -94,10 +96,25 @@ func (r *reservationRepository) CreateWithCapacityCheck(userID uint, zoneID uint
 			return err
 		}
 
-		// 3. CAPACITY CHECK. Held spots (len(SpotHolds)) are subtracted
-		// from capacity alongside real active reservations; they are
-		// truly off-limits for booking per the spec.
-		holdCount := len(z.SpotHolds)
+		// 3. CAPACITY CHECK. Held spots (entries equal to 1 in spot_holds)
+		// are subtracted from capacity alongside real active reservations;
+		// they are truly off-limits for booking per the spec.
+		//
+		// We count the number of entries equal to 1, NOT len(spot_holds),
+		// because len(spot_holds) always equals total_capacity and would
+		// wrongly reject every reservation.
+		//
+		// If spot_holds is empty or its length does not match total_capacity
+		// (legacy row that has not yet been touched by EnsureSpotHoldsLength),
+		// fall back to 0 held spots — i.e. treat the zone as if it had no
+		// presentation-only holds. This is the safest assumption in a locked
+		// reservation transaction: better to allow a real reservation than to
+		// 409 a driver because of a missing bitmap.
+		holdCount := 0
+		if len(z.SpotHolds) == z.TotalCapacity {
+			holdCount = countHeldSpots(z.SpotHolds)
+		}
+
 		if int(activeCount)+holdCount >= z.TotalCapacity {
 			return ErrZoneFull
 		}
@@ -118,6 +135,22 @@ func (r *reservationRepository) CreateWithCapacityCheck(userID uint, zoneID uint
 		return nil, err
 	}
 	return &created, nil
+}
+
+// countHeldSpots returns the number of entries equal to 1 in the
+// spot_holds bitmap. The previous implementation used len(spot_holds),
+// which always equals total_capacity (the array length), so every zone
+// was wrongly reported as full the moment spot_holds was populated.
+// Held spots are the entries set to 1 by the seeder / rotator; entries
+// set to 0 represent still-available spots.
+func countHeldSpots(holds []int64) int {
+	n := 0
+	for _, v := range holds {
+		if v == 1 {
+			n++
+		}
+	}
+	return n
 }
 
 func (r *reservationRepository) FindByID(id uint) (*models.Reservation, error) {

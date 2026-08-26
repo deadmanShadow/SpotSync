@@ -116,7 +116,7 @@ func (r *zoneRepository) CountActiveReservations(zoneID uint) (int64, error) {
 // computed AvailableSpots value:
 //
 //	available_spots = total_capacity
-//	                   - SUM(spot_holds)
+//	                   - (number of 1s in spot_holds)
 //	                   - COUNT(active_reservations)
 //	                   - rotation_hold
 //
@@ -125,6 +125,12 @@ func (r *zoneRepository) CountActiveReservations(zoneID uint) (int64, error) {
 // layer that reserves a random subset of spots in each zone. Held spots
 // are additive to real reservations and block new bookings until the
 // next regeneration (zone create/capacity change / hourly rotation).
+//
+// IMPORTANT: the held count is the number of array elements equal to 1,
+// NOT array_length(spot_holds, 1). array_length returns the dimension
+// length of the array (which always equals total_capacity for a fully
+// populated bitmap), and using it would subtract total_capacity from
+// itself, always yielding 0 available spots.
 //
 // The `rotation_hold` column is owned by the ZoneRotator (see
 // internal/seeder/rotator.go) and is used to mark a zone as "full" for
@@ -152,9 +158,9 @@ func (r *zoneRepository) FindAllWithAvailability() ([]dto.ZoneResponse, error) {
 		Table("parking_zones pz").
 		Select(`pz.id, pz.name, pz.type, pz.total_capacity,
 		        GREATEST(0, pz.total_capacity
-		            - COALESCE(array_length(pz.spot_holds, 1), 0)
-		            - COALESCE((SELECT COUNT(*) FROM reservations r
-		                WHERE r.zone_id = pz.id AND r.status = 'active'), 0)
+		            - (SELECT COUNT(*) FROM unnest(pz.spot_holds) AS s(hold) WHERE s.hold = 1)
+		            - (SELECT COUNT(*) FROM reservations r
+		                WHERE r.zone_id = pz.id AND r.status = 'active')
 		            - pz.rotation_hold
 		        ) AS available_spots,
 		        pz.price_per_hour, pz.spot_holds,
@@ -208,9 +214,9 @@ func (r *zoneRepository) FindByIDWithAvailability(id uint) (*dto.ZoneResponse, e
 		Table("parking_zones pz").
 		Select(`pz.id, pz.name, pz.type, pz.total_capacity,
 		        GREATEST(0, pz.total_capacity
-		            - COALESCE(array_length(pz.spot_holds, 1), 0)
-		            - COALESCE((SELECT COUNT(*) FROM reservations r
-		                WHERE r.zone_id = pz.id AND r.status = 'active'), 0)
+		            - (SELECT COUNT(*) FROM unnest(pz.spot_holds) AS s(hold) WHERE s.hold = 1)
+		            - (SELECT COUNT(*) FROM reservations r
+		                WHERE r.zone_id = pz.id AND r.status = 'active')
 		            - pz.rotation_hold
 		        ) AS available_spots,
 		        pz.price_per_hour, pz.spot_holds,
